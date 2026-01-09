@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Zoom</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        #video-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            background: black;
+            border-radius: 8px;
+        }
+
+        .participant-container {
+            width: 320px;
+            background: #333;
+            border-radius: 10px;
+            padding: 5px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #444;
+        }
+
+        .participant-label {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none;
+        }
+
+        #log {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #aaa;
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            display: inline-block;
+            min-width: 300px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #222;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>LiveKit Mini Zoom</h2>
+    <div style="margin-bottom: 20px;">
+        <div id="room-info" style="margin-bottom: 10px; font-weight: bold; color: #28a745;"></div>
+        <button id="join-btn" onclick="join()">Join Meeting</button>
+        <button id="share-btn" onclick="copyShareLink()" style="background: #007bff; margin-left: 10px;">Copy Share
+            Link</button>
+    </div>
+
+    <div id="video-container"></div>
+    <div id="log"></div>
+
+    <!-- Stabilized CDN link -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            console.log(msg);
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerText = `> ${msg}`;
+            logEl.prepend(entry);
+        }
+
+        async function join() {
+            // LiveKit SDK uses different global names depending on the version/build
+            const LK = window.LivekitClient || window.LiveKitClient || window.LiveKit;
+
+            if (typeof LK === 'undefined') {
+                log("ERROR: LiveKit library (LK) is not defined. Checking window properties...");
+                console.log("Window keys:", Object.keys(window).filter(k => k.toLowerCase().includes('livekit')));
+                alert("LiveKit SDK failed to load. Please check your internet or try a different browser.");
+                return;
+            }
+
+            document.getElementById('join-btn').disabled = true;
+            log("Starting connection...");
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const roomName = urlParams.get('room') || "test-room";
+                const userName = "user-" + Math.floor(Math.random() * 1000);
+
+                log(`Joining room: ${roomName}...`);
+                log("Fetching access token...");
+
+                // Use current hostname to reach the backend, with fallback for file://
+                const hostname = window.location.hostname || "192.168.29.73";
+                const backendUrl = `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${hostname}:5000`;
+                log(`Backend URL: ${backendUrl}`);
+                const res = await fetch(`${backendUrl}/get-token/${roomName}/${userName}`);
+                if (!res.ok) throw new Error("Backend server error: " + res.status);
+
+                const data = await res.json();
+                log(`Token received. LiveKit URL from backend: ${data.url}`);
+                log("Connecting to LiveKit...");
+
+                const room = new LK.Room();
+
+                // Log connection state changes
+                room.on('connectionStateChanged', (state) => {
+                    log("Room connection state: " + state);
+                });
+
+                // Handle remote participants and tracks
+                room.on("trackSubscribed", (track, publication, participant) => {
+                    log(`New remote track: ${track.kind} from ${participant.identity}`);
+                    handleTrackSubscribed(track, participant);
+                });
+
+                room.on("trackUnsubscribed", (track, publication, participant) => {
+                    log(`Track unsubscribed: ${track.kind} from ${participant.identity}`);
+                    track.detach().forEach((el) => el.remove());
+
+                    // If it was video, also check if we should remove the container
+                    if (track.kind === 'video') {
+                        const container = document.getElementById(`p-${participant.identity}`);
+                        if (container) container.remove();
+                    }
+                });
+
+                room.on("participantDisconnected", (participant) => {
+                    log(`Participant disconnected: ${participant.identity}`);
+                    const container = document.getElementById(`p-${participant.identity}`);
+                    if (container) container.remove();
+                });
+
+                function handleTrackSubscribed(track, participant) {
+                    const element = track.attach();
+
+                    if (track.kind === 'video') {
+                        let container = document.getElementById(`p-${participant.identity}`);
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = `p-${participant.identity}`;
+                            container.className = 'participant-container';
+
+                            const label = document.createElement('div');
+                            label.className = 'participant-label';
+                            label.innerText = participant.identity;
+                            container.appendChild(label);
+
+                            document.getElementById("video-container").appendChild(container);
+                        }
+
+                        // Clear any existing video in container (except label)
+                        Array.from(container.children).forEach(child => {
+                            if (child.tagName === 'VIDEO') child.remove();
+                        });
+
+                        container.appendChild(element);
+                    } else if (track.kind === 'audio') {
+                        element.style.display = "none";
+                        document.body.appendChild(element);
+                    }
+                }
+
+                // Connect to the room
+                await room.connect(data.url, data.token);
+                log("CONNECTED to room: " + room.name);
+
+                // Publish local tracks
+                log("Publishing camera & microphone...");
+                await room.localParticipant.enableCameraAndMicrophone();
+                log("Local tracks published.");
+
+                // Show local video
+                log("Setting up local video...");
+                handleTrackSubscribed(room.localParticipant.getTrackPublication(LK.Track.Source.Camera).videoTrack, room.localParticipant);
+
+                // Add mirror effect to local video
+                const localVideoContainer = document.getElementById(`p-${room.localParticipant.identity}`);
+                if (localVideoContainer) {
+                    const localVideo = localVideoContainer.querySelector('video');
+                    if (localVideo) localVideo.style.transform = "scaleX(-1)";
+                }
+
+            } catch (error) {
+                log("CRITICAL ERROR: " + error.message);
+                console.error(error);
+                alert("Join failed: " + error.message);
+                document.getElementById('join-btn').disabled = false;
+            }
+        }
+        function copyShareLink() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let roomName = urlParams.get('room');
+            if (!roomName) {
+                roomName = "test-room";
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + roomName;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            }
+
+            const shareUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + roomName;
+
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("Share link copied to clipboard!\n" + shareUrl);
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+                alert("Failed to copy link. Link is: " + shareUrl);
+            });
+        }
+
+        // Initialize UI with room name
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomName = urlParams.get('room') || "test-room";
+            document.getElementById('room-info').innerText = `Room: ${roomName}`;
+        };
+    </script>
+</body>
+
+</html>
