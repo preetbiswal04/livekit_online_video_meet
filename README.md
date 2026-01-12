@@ -1,86 +1,31 @@
-#  LiveKit Video Meeting – Setup Guide
+Application Startup Guide (LiveKit Cloud)
+This document outlines the steps to run the application using LiveKit Cloud. Docker is no longer required.
 
-This guide explains how to **set up the LiveKit video meeting project locally** on your system.
+1. System Requirements
+Software
+Python 3.7+: Required for the Flask backend.
+Web Browser: A modern browser (Chrome, Edge, or Firefox).
+Security (CRITICAL)
+Secure Context: Browsers only allow camera/microphone access in a "Secure Context".
+Recommended: Use http://localhost:5000.
+2. Environment Configuration
+Your 
+.env
+ file should contain your LiveKit Cloud credentials:
 
----
-
-## 🔹 Prerequisites
-
-Before setup, make sure you have:
-
-* **Python 3.9+**
-* **Docker & Docker Compose download **
-* **Git**
-* LiveKit API Key and Secret (from your LiveKit account)
-
----
-
-
-## 🔹 Step 1: Configure Environment
-
-1. Create a `.env` file in the project root.
-2. Add your LiveKit credentials:
-
-```env
-LIVEKIT_API_KEY=your_api_key_here
-LIVEKIT_API_SECRET=your_api_secret_here
-LIVEKIT_URL=ws://localhost:7880
-```
-
-> **Important:** `.env` file is ignored in Git. Never upload it to GitHub.
-
----
-
-## 🔹 Step 2: Start LiveKit Server (Docker)
-
-```bash
-docker compose up -d
-```
-
-Check if server is running:
-
-```bash
-docker ps
-```
-
----
-
-## 🔹 Step 5: Install Python Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 🔹 Step 6: Run Flask Backend
-
-```bash
+LIVEKIT_API_KEY=your_cloud_api_key
+LIVEKIT_API_SECRET=your_cloud_api_secret
+LIVEKIT_API_URL=wss://your-project.livekit.cloud
+3. Backend Setup
+Install dependencies:
+pip install flask flask-cors python-dotenv livekit
+Start the backend:
 python backend.py
-```
-
-* The backend will run at:
-
-```
-http://localhost:5000
-```
-
----
-
-## 🔹 Step 7: Open Frontend
-
-* Open `templates/index.html` in a browser
-* Enter your **name** and **room name**
-* Share the same **room name** with others to join the call
-
----
-
-## 🔹 Notes
-
-* Make sure **all participants** are on the same network or have LiveKit server accessible.
-* Use `.env.example` as reference if unsure about environment variables.
-
----
-
-This README **only covers setup** — nothing about code explanation or architecture.
-
+4. Accessing the App
+Open your browser to: http://localhost:5000
+Click Join Meeting.
+5. Verification Plan
+Verify 
+backend.py
+ log shows it's running on http://127.0.0.1:5000.
+Verify the "CONNECTED to room" message appears in the browser console/log after joining.
