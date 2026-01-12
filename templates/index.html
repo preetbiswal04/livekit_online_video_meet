@@ -131,6 +131,13 @@
             document.getElementById('join-btn').disabled = true;
             log("Starting connection...");
 
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                log("ERROR: navigator.mediaDevices is undefined. This usually happens in insecure contexts (non-HTTPS or non-localhost).");
+                alert("Browser Error: Your browser blocks camera access on insecure connections.\n\nPlease use http://localhost:5000 or set up HTTPS.");
+                document.getElementById('join-btn').disabled = false;
+                return;
+            }
+
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const roomName = urlParams.get('room') || "test-room";
@@ -140,7 +147,7 @@
                 log("Fetching access token...");
 
                 // Use current hostname to reach the backend, with fallback for file://
-                const hostname = window.location.hostname || "192.168.29.73";
+                const hostname = window.location.hostname || "192.168.100.80";
                 const backendUrl = `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${hostname}:5000`;
                 log(`Backend URL: ${backendUrl}`);
                 const res = await fetch(`${backendUrl}/get-token/${roomName}/${userName}`);
