@@ -11,7 +11,7 @@ CORS(app)
 
 LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET')
-LIVEKIT_API_URL = os.environ.get('LIVEKIT_API_URL', 'http://localhost:7880')
+LIVEKIT_API_URL = os.environ.get('LIVEKIT_API_URL', 'wss://appvideocall-4e91dis5.livekit.cloud')
 
 @app.route('/')
 def home():
