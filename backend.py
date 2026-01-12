@@ -33,5 +33,33 @@ def get_token(room_name, user):
         "url": LIVEKIT_API_URL
     })
 
+# --- Expanded API for Teams UI ---
+
+@app.route('/api/rooms')
+def list_rooms():
+    # In a real app, you'd fetch this from LiveKit API or a database
+    # For now, we'll return some mock active rooms
+    rooms = [
+        {"name": "General", "participants": 3, "id": "general"},
+        {"name": "Project Alpha", "participants": 5, "id": "alpha"},
+        {"name": "Weekly Sync", "participants": 2, "id": "sync"}
+    ]
+    return jsonify(rooms)
+
+@app.route('/api/create-room', methods=['POST'])
+def create_room():
+    # Mock room creation
+    new_room_id = f"room-{os.urandom(4).hex()}"
+    return jsonify({"room_name": new_room_id, "status": "created"})
+
+@app.route('/api/user')
+def get_user_info():
+    # Mock user info
+    return jsonify({
+        "id": "user-" + os.urandom(2).hex(),
+        "name": "Jane Doe",
+        "role": "Moderator"
+    })
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
