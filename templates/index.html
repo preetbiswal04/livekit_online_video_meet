@@ -9,13 +9,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --teams-purple: #4B53BC;
+            --teams-purple: #603ab8;
             --teams-bg: #F5F5F5;
             --sidebar-bg: #EBEBEB;
             --sidebar-active: #FFFFFF;
             --text-main: #242424;
             --text-muted: #616161;
-            --border-color: #EDEBE9;
+            --border-color: #0c0c0c;
         }
 
         * {
@@ -90,8 +90,11 @@
         /* Sidebar Side-Panel (Chat/People) */
         #side-panel {
             width: 300px;
-            background: white;
-            border-left: 1px solid var(--border-color);
+            background: #1A1A1A;
+            /* Black background */
+            color: #FFFFFF;
+            /* White font */
+            border-left: 1px solid #333;
             display: none;
             flex-direction: column;
             height: 100%;
@@ -103,10 +106,14 @@
 
         .panel-header {
             padding: 16px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .panel-header h4 {
+            color: white;
         }
 
         .panel-content {
@@ -126,32 +133,38 @@
             font-size: 13px;
             padding: 8px;
             border-radius: 4px;
-            background: #F3F2F1;
+            background: #2D2D2D;
+            /* Dark grey for messages */
+            color: white;
             max-width: 90%;
         }
 
         .msg.self {
             align-self: flex-end;
-            background: #E1DFDD;
+            background: #3D3D3D;
         }
 
         .msg-sender {
             font-weight: bold;
             font-size: 11px;
             margin-bottom: 2px;
+            color: #C8C8E1;
         }
 
         .chat-input-area {
             padding: 16px;
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid #333;
             display: flex;
             gap: 8px;
+            background: #1A1A1A;
         }
 
         .chat-input-area input {
             flex-grow: 1;
             padding: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid #444;
+            background: #2D2D2D;
+            color: white;
             border-radius: 4px;
             outline: none;
         }
@@ -377,6 +390,8 @@
 
         /* Log Utility */
         #log-overlay {
+            display: none;
+            /* Hidden by default */
             position: fixed;
             bottom: 90px;
             right: 10px;
@@ -464,7 +479,7 @@
     <!-- Main Shell -->
     <div id="app-shell">
         <header>
-            <div style="font-weight: bold; color: var(--teams-purple); font-size: 18px;">Microsoft Teams <span
+            <div style="font-weight: bold; color: var(--teams-purple); font-size: 18px;"> Teams Meeting <span
                     style="font-weight: normal; color: #666; font-size: 14px; margin-left: 8px;">Pro</span></div>
             <div class="search-bar">
                 <i class="fas fa-search"></i>
@@ -474,7 +489,7 @@
                 <i class="fas fa-ellipsis-h" style="color: var(--text-muted); cursor: pointer;"></i>
                 <div
                     style="width: 32px; height: 32px; border-radius: 50%; background: #4B53BC; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
-                    JD</div>
+                    PB</div>
             </div>
         </header>
 
@@ -482,7 +497,7 @@
             <!-- Home View -->
             <div id="home-view" class="view active">
                 <div style="margin-bottom: 30px;">
-                    <h1 style="font-size: 24px; margin-bottom: 8px;">Welcome back, Jane</h1>
+                    <h1 style="font-size: 24px; margin-bottom: 8px;">Welcome back, Preet</h1>
                     <p style="color: var(--text-muted);">Stay connected with your team and get more done.</p>
                 </div>
 
@@ -802,7 +817,7 @@
             const msgEl = document.createElement('div');
             msgEl.className = `msg ${isSelf ? 'self' : ''}`;
             if (isTranscript) {
-                msgEl.style.background = "#F0F0FF";
+                msgEl.style.background = "#2D2D3A";
                 msgEl.style.borderLeft = "3px solid var(--teams-purple)";
                 msgEl.style.fontStyle = "italic";
             }
