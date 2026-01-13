@@ -1,0 +1,7 @@
+livekit-plugins-elevenlabs
+livekit-plugins-openai
+python-dotenv
+flask
+flask-cors
+gunicorn
+livekit-plugins-deepgram
