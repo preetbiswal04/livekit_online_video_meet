@@ -1,6 +1,6 @@
 import asyncio
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, stt
-from livekit.plugins import deepgram
+from livekit.plugins import deepgram, silero
 from livekit.rtc import AudioStream, DataPacketKind, TrackKind
 from dotenv import load_dotenv
 import os
@@ -20,8 +20,13 @@ async def entrypoint(ctx: JobContext):
     stt_instance = deepgram.STT(
         api_key=api_key,
         interim_results=True,  # Enable for real-time updates
-        model="nova-2"  # Fast model
+        model="nova-2",
+        #model = "nova-3", 
+        language="hi" ,
+        endpointing_ms=1000# Fast model
     )
+    vad=silero.VAD.load(),  
+    
     
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
     print(f"Connected as {ctx.room.local_participant.identity}")
@@ -76,9 +81,9 @@ async def entrypoint(ctx: JobContext):
                         print(f"ERROR: Chat publication FAILED: {e}")
                     
                     # Only save final transcripts to file
-                    # if is_final:
-                    #     with open("transcripts.log", "a", encoding="utf-8") as f:
-                    #         f.write(f"{participant.identity}: {text}\n")
+                     if is_final:
+                         with open("transcripts.log", "a", encoding="utf-8") as f:
+                             f.write(f"{participant.identity}: {text}\n")
                 
                 if event.type == stt.SpeechEventType.RECOGNITION_USAGE:
                    print("DEBUG: Deepgram processed utterance.")
@@ -101,6 +106,3 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
-
-############################ Previous Versions ################################
-
