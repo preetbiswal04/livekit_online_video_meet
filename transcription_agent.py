@@ -22,7 +22,7 @@ async def entrypoint(ctx: JobContext):
         interim_results=True,  # Enable for real-time updates
         model="nova-2",
         #model = "nova-3", 
-        language="hi" ,
+        language="en-IN" ,
         endpointing_ms=1000# Fast model
     )
     vad=silero.VAD.load(),  
@@ -106,3 +106,4 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+
