@@ -9,3 +9,5 @@ livekit-agents
 livekit-plugins-deepgram
 livekit-plugins-silero
 python-dotenv
+python "backend.py"
+python transcription_agent.py dev
