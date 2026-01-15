@@ -61,5 +61,61 @@ def get_user_info():
         "role": "Moderator"
     })
 
+# --- MongoDB Integration ---
+from pymongo import MongoClient
+
+MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'livekit_chat')
+
+try:
+    mongo_client = MongoClient(MONGO_URI)
+    db = mongo_client[MONGO_DB_NAME]
+    messages_collection = db['messages']
+    print(f"Connected to MongoDB: {MONGO_DB_NAME}")
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
+    messages_collection = None
+
+@app.route('/api/history/<room_name>')
+def get_chat_history(room_name):
+    if messages_collection is None:
+        return jsonify([])
+    
+    # Fetch messages, sorted by timestamp (oldest first)
+    # Exclude _id field for cleaner JSON
+    messages = list(messages_collection.find(
+        {"room": room_name},
+        {"_id": 0}
+    ).sort("timestamp", 1))
+    
+    return jsonify(messages)
+
+@app.route('/api/save-message', methods=['POST'])
+def save_message():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data"}), 400
+    
+    if messages_collection is not None:
+        try:
+            doc = {
+                "room": data.get("room"),
+                "sender": data.get("sender"),
+                "text": data.get("text"),
+                "timestamp": datetime.datetime.utcnow(),
+                "is_transcript": False
+            }
+            messages_collection.insert_one(doc)
+            return jsonify({"status": "saved"})
+        except Exception as e:
+            print(f"Error saving message: {e}")
+            return jsonify({"error": str(e)}), 500
+            
+    return jsonify({"error": "DB not connected"}), 500
+
+# --- Register Blueprints ---
+from agent_routes import agent_bp
+app.register_blueprint(agent_bp)
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
