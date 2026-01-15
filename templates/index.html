@@ -480,7 +480,7 @@
     <div id="app-shell">
         <header>
             <div style="font-weight: bold; color: var(--teams-purple); font-size: 18px;"> Teams Meeting <span
-                    style="font-weight: normal; color: #666; font-size: 14px; margin-left: 8px;">Pro Max Ultra</span></div>
+                    style="font-weight: normal; color: #666; font-size: 14px; margin-left: 8px;">Pro</span></div>
             <div class="search-bar">
                 <i class="fas fa-search"></i>
                 <input type="text" placeholder="Search for people or files...">
@@ -710,7 +710,10 @@
                     renderTrack(track, part);
                 });
                 activeRoom.on('trackUnsubscribed', (track, pub, part) => {
-                    const el = document.getElementById(`p-${part.identity}${track.source === 'screen_share' ? '-screen' : ''}`);
+                    track.detach().forEach(el => el.remove());
+                    // Also clean up video tiles if needed, though detach handles the video element
+                    const isScreen = track.source === 'screen_share';
+                    const el = document.getElementById(`p-${part.identity}${isScreen ? '-screen' : ''}`);
                     if (el && track.kind === 'video') el.remove();
                 });
                 activeRoom.on('dataReceived', (payload, participant) => {
@@ -732,6 +735,9 @@
                 await activeRoom.connect(data.url, data.token);
                 log("Connected!");
 
+                // Fetch and display chat history
+                await fetchChatHistory(roomName);
+
                 await activeRoom.localParticipant.enableCameraAndMicrophone();
 
                 // Render self
@@ -746,11 +752,41 @@
             }
         }
 
+        async function fetchChatHistory(roomName) {
+            try {
+                const res = await fetch(`/api/history/${roomName}`);
+                if (!res.ok) throw new Error("Failed to fetch history");
+                const messages = await res.json();
+
+                const container = document.getElementById('chat-messages');
+                // Clear existing only if not appending (but here we just joined so it should be empty or we might want to preserve invalid states? usually clear)
+                container.innerHTML = '';
+
+                messages.forEach(msg => {
+                    const isSelf = activeRoom.localParticipant && msg.sender === activeRoom.localParticipant.identity;
+                    // For history, we don't know if 'isSelf' is reliably true because we might have rejoined with a different identity if random. 
+                    // But if we assume identity persistence, we check. 
+                    // Since random ID is used in this demo code: "user-" + Math.floor... we probably won't match. 
+                    // So just display as is.
+
+                    appendChatMessage(msg.sender, msg.text, false, msg.is_transcript);
+                });
+
+                if (messages.length > 0) log(`Loaded ${messages.length} past messages.`);
+            } catch (e) {
+                log("Could not load history: " + e.message);
+            }
+        }
+
         function renderTrack(track, participant, isLocal = false) {
             if (track.kind !== 'video') {
                 if (track.kind === 'audio') {
                     const el = track.attach();
                     document.body.appendChild(el);
+                    el.play().catch(err => {
+                        console.error("Audio playback error:", err);
+                        log("Audio Autoplay blocked? Interact with page.");
+                    });
                 }
                 return;
             }
@@ -805,6 +841,17 @@
                 const data = encoder.encode(text);
                 await activeRoom.localParticipant.publishData(data, { reliable: true });
 
+                // Save to Backend
+                fetch('/api/save-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room: activeRoom.name,
+                        sender: activeRoom.localParticipant.identity,
+                        text: text
+                    })
+                }).catch(e => console.error("Failed to save message:", e));
+
                 appendChatMessage("You", text, true);
                 input.value = '';
             } catch (e) {
@@ -857,13 +904,18 @@
             log("Left meeting.");
         }
 
-        function toggleMic() {
+        async function toggleMic() {
             if (!activeRoom) return;
             const enabled = activeRoom.localParticipant.isMicrophoneEnabled;
-            activeRoom.localParticipant.setMicrophoneEnabled(!enabled);
-            const btn = document.getElementById('mic-btn');
-            btn.innerHTML = !enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
-            btn.style.background = !enabled ? '#3D3D3D' : '#C4314B';
+            try {
+                await activeRoom.localParticipant.setMicrophoneEnabled(!enabled);
+                const btn = document.getElementById('mic-btn');
+                btn.innerHTML = !enabled ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+                btn.style.background = !enabled ? '#3D3D3D' : '#C4314B';
+            } catch (e) {
+                log("Failed to toggle mic: " + e.message);
+                alert("Microphone Error: " + e.message);
+            }
         }
 
         function toggleCam() {
