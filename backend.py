@@ -114,8 +114,8 @@ def save_message():
     return jsonify({"error": "DB not connected"}), 500
 
 # --- Register Blueprints ---
-from agent_routes import agent_bp
-app.register_blueprint(agent_bp)
+# from agent_routes import agent_bp
+# app.register_blueprint(agent_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
