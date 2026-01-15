@@ -4,6 +4,10 @@ from livekit.plugins import deepgram, silero
 from livekit.rtc import AudioStream, DataPacketKind, TrackKind
 from dotenv import load_dotenv
 import os
+import datetime
+from motor.motor_asyncio import AsyncIOMotorClient
+import datetime
+from motor.motor_asyncio import AsyncIOMotorClient
 
 load_dotenv()
 
@@ -23,9 +27,21 @@ async def entrypoint(ctx: JobContext):
         model="nova-2",
         #model = "nova-3", 
         language="en-IN" ,
-        endpointing_ms=1000# Fast model
+        #endpointing_ms=1000# Fast model
     )
-    vad=silero.VAD.load(),  
+    # vad=silero.VAD.load(),  
+
+    # --- MongoDB Setup (Async) ---
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+    mongo_db_name = os.getenv("MONGO_DB_NAME", "livekit_chat")
+    try:
+        mongo_client = AsyncIOMotorClient(mongo_uri)
+        db = mongo_client[mongo_db_name]
+        messages_collection = db['messages']
+        print(f"Connected to MongoDB: {mongo_db_name}")
+    except Exception as e:
+        print(f"Failed to connect to MongoDB: {e}")
+        messages_collection = None
     
     
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -80,10 +96,24 @@ async def entrypoint(ctx: JobContext):
                     except Exception as e:
                         print(f"ERROR: Chat publication FAILED: {e}")
                     
-                    # Only save final transcripts to file
-                     if is_final:
-                         with open("transcripts.log", "a", encoding="utf-8") as f:
-                             f.write(f"{participant.identity}: {text}\n")
+                    # # Only save final transcripts to file
+                    if is_final:
+                        with open("transcripts.log", "a", encoding="utf-8") as f:
+                            f.write(f"{participant.identity}: {text}\n")
+                        
+                        # Save to MongoDB
+                        if messages_collection is not None:
+                            try:
+                                doc = {
+                                    "room": ctx.room.name,
+                                    "sender": participant.identity,
+                                    "text": text,
+                                    "timestamp": datetime.datetime.utcnow(),
+                                    "is_transcript": True
+                                }
+                                await messages_collection.insert_one(doc)
+                            except Exception as e:
+                                print(f"ERROR: Failed to save to MongoDB: {e}")
                 
                 if event.type == stt.SpeechEventType.RECOGNITION_USAGE:
                    print("DEBUG: Deepgram processed utterance.")
@@ -106,4 +136,3 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
-
