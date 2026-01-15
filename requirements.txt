@@ -11,3 +11,6 @@ livekit-plugins-silero
 python-dotenv
 python "backend.py"
 python transcription_agent.py dev
+pymongo
+motor
+#command for databse run : & "C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe" --dbpath "c:\Users\preet\Downloads\live_kit\mongo_data"
