@@ -37,4 +37,4 @@ Write-Host "Starting Flask Backend..." -ForegroundColor Cyan
 Start-Process python -ArgumentList "backend.py" -NoNewWindow
 # Start Transcription Agent (AI Worker)
 Write-Host "Starting Transcription Agent..." -ForegroundColor Cyan
-python transcription_agent.py dev
+python transcription_agent_deepgram.py dev
