@@ -27,9 +27,9 @@ async def entrypoint(ctx: JobContext):
         model="nova-2",
         #model = "nova-3", 
         language="en-IN" ,
-        #endpointing_ms=1000# Fast model
+        endpointing_ms=1000# Fast model
     )
-    # vad=silero.VAD.load(),  
+    vad=silero.VAD.load(),  
 
     # --- MongoDB Setup (Async) ---
     mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
