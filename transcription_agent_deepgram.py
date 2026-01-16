@@ -104,14 +104,26 @@ async def entrypoint(ctx: JobContext):
                         # Save to MongoDB
                         if messages_collection is not None:
                             try:
-                                doc = {
-                                    "room": ctx.room.name,
-                                    "sender": participant.identity,
-                                    "text": text,
-                                    "timestamp": datetime.datetime.utcnow(),
-                                    "is_transcript": True
-                                }
-                                await messages_collection.insert_one(doc)
+                                await messages_collection.update_one(
+                                    {
+                                        "room": ctx.room.name,
+                                        "type": "transcript_aggregation"
+                                    },
+                                    {
+                                        "$setOnInsert": {
+                                            "created_at": datetime.datetime.utcnow(),
+                                            "is_transcript": True
+                                        },
+                                        "$push": {
+                                            "segments": {
+                                                "sender": participant.identity,
+                                                "text": text,
+                                                "timestamp": datetime.datetime.utcnow()
+                                            }
+                                        }
+                                    },
+                                    upsert=True
+                                )
                             except Exception as e:
                                 print(f"ERROR: Failed to save to MongoDB: {e}")
                 
