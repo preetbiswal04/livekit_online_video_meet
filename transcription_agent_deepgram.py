@@ -14,16 +14,16 @@ load_dotenv()
 async def entrypoint(ctx: JobContext):
     print(f"--- Room {ctx.room.name}: Deepgram Transcription agent started ---")
 
-    # Get API key from environment
+    
     api_key = os.getenv("DEEPGRAM_API_KEY")
     if not api_key:
         print("ERROR: DEEPGRAM_API_KEY is missing from .env!")
         return
 
-    # Initialize Deepgram STT - optimized for ultra-low latency
+    
     stt_instance = deepgram.STT(
         api_key=api_key,
-        interim_results=True,  # Enable for real-time updates
+        interim_results=True,  
         model="nova-2",
         #model = "nova-3", 
         language="en-IN" ,
@@ -147,4 +147,4 @@ async def entrypoint(ctx: JobContext):
     print("Agent is ready and listening for Deepgram events...")
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, port = 8051))
