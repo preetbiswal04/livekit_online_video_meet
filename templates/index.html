@@ -312,6 +312,18 @@
             gap: 12px;
             padding: 12px;
             align-content: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Screen Share Layout */
+        #video-grid.screen-share-active {
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: auto;
+            /* Let rows grow */
+            grid-auto-rows: min-content;
+            align-content: start;
+            overflow-y: auto;
+            /* Allow scrolling */
         }
 
         .participant-tile {
@@ -332,14 +344,68 @@
             object-fit: cover;
         }
 
-        .participant-tile .name-tag {
+        .participant-tile.screen-share {
+            /* In grid mode, it behaves normally or spans 2 cols if set */
+            /* In active mode, JS will ensure it is the first child */
+            background: #000;
+        }
+
+        #video-grid.screen-share-active .participant-tile.screen-share {
+            grid-column: 1 / 2;
+            /* Sticky so it stays in view while scrolling sidebar */
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 140px);
+            grid-row: 1 / span 50;
+            z-index: 5;
+        }
+
+        #video-grid.screen-share-active .participant-tile:not(.screen-share) {
+            height: 200px;
+            grid-column: 2 / 3;
+        }
+
+        .participant-tile.screen-share video {
+            object-fit: contain;
+            background: #000;
+        }
+
+        .fullscreen-btn {
             position: absolute;
-            bottom: 12px;
-            left: 12px;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 20;
+        }
+
+        .participant-tile:hover .fullscreen-btn {
+            opacity: 1;
+        }
+
+        .participant-tile .name-tag {
+            position: absolute !important;
+            bottom: 12px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
             background: rgba(0, 0, 0, 0.6);
             padding: 4px 10px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 14px;
+            color: white;
+            font-weight: 500;
+            z-index: 100 !important;
+            white-space: nowrap;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
         }
 
         .meeting-controls {
@@ -443,6 +509,66 @@
             border-radius: 4px;
             font-size: 14px;
         }
+
+        /* Profile Dropdown */
+        .profile-container {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .profile-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4B53BC;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: 40px;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 200px;
+            z-index: 3000;
+        }
+
+        .profile-dropdown.active {
+            display: block;
+        }
+
+        .profile-info {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+        }
+
+        .profile-item {
+            display: block;
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .profile-item:hover {
+            background: #f5f5f5;
+        }
+
+        .profile-item.logout {
+            color: #C4314B;
+        }
     </style>
 </head>
 
@@ -486,10 +612,17 @@
                 <input type="text" placeholder="Search for people or files...">
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-ellipsis-h" style="color: var(--text-muted); cursor: pointer;"></i>
-                <div
-                    style="width: 32px; height: 32px; border-radius: 50%; background: #4B53BC; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
-                    PB</div>
+                <div class="profile-container" onclick="toggleProfileMenu(event)">
+                    <div class="profile-avatar">
+                        {{ username[0] | upper }}
+                    </div>
+                    <div class="profile-dropdown" id="profile-dropdown">
+                        <div class="profile-info">Signed in as <strong>{{ username }}</strong></div>
+                        <a href="/api/logout" class="profile-item logout">
+                            <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i> Sign out
+                        </a>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -497,7 +630,7 @@
             <!-- Home View -->
             <div id="home-view" class="view active">
                 <div style="margin-bottom: 30px;">
-                    <h1 style="font-size: 24px; margin-bottom: 8px;">Welcome back, Preet</h1>
+                    <h1 style="font-size: 24px; margin-bottom: 8px;">Welcome back, {{ username }}</h1>
                     <p style="color: var(--text-muted);">Stay connected with your team and get more done.</p>
                 </div>
 
@@ -516,6 +649,20 @@
                         <button class="btn btn-secondary" onclick="showJoinModal('join')">Join with ID</button>
                     </div>
                     <div class="card">
+                        <i class="fas fa-file-invoice"
+                            style="font-size: 24px; color: #17a2b8; margin-bottom: 16px;"></i>
+                        <h3>AI Interview Prep</h3>
+                        <p>Upload your Resume and paste the JD to generate targeted questions and start an AI-led
+                            interview.</p>
+                        <form id="uploadForm" style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="file" id="resumeInput" accept=".pdf,.docx" class="btn btn-secondary"
+                                style="width: 100%; border: 1px dotted #ccc;">
+                            <textarea id="jdInput" placeholder="Paste Job Description here..."
+                                style="font-size: 12px; padding: 8px; height: 60px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                            <button type="submit" class="btn btn-primary" id="prep-btn">Prepare Interview</button>
+                        </form>
+                    </div>
+                    <div class="card">
                         <i class="fas fa-clock" style="font-size: 24px; color: #ffc107; margin-bottom: 16px;"></i>
                         <h3>Recent Rooms</h3>
                         <div id="rooms-list" style="font-size: 13px; color: #666;">
@@ -531,6 +678,7 @@
                     <div class="meeting-header">
                         <div>
                             <span id="meeting-title" style="font-weight: 600;">Meeting: Unknown</span>
+                            <span style="font-size: 13px; color: #aaa; margin-left: 10px;">(You: {{ username }})</span>
                             <span style="margin-left: 12px; font-size: 12px; color: #aaa;"
                                 id="meeting-duration">00:00</span>
                         </div>
@@ -556,7 +704,7 @@
                             title="Share Screen"><i class="fas fa-arrow-up-from-bracket"></i></button>
                         <button class="tool-btn" id="chat-toggle-btn" onclick="toggleChat()" title="Chat"><i
                                 class="fas fa-message"></i></button>
-                        <button class="tool-btn" id="people-toggle-btn" title="People"><i
+                        <button class="tool-btn" id="people-toggle-btn" onclick="togglePeople()" title="People"><i
                                 class="fas fa-user-group"></i></button>
                         <button class="tool-btn" id="more-btn" title="More"><i class="fas fa-ellipsis"></i></button>
                         <button class="tool-btn danger" onclick="leaveMeeting()" title="Leave Meeting"
@@ -567,21 +715,32 @@
                     </div>
                 </div>
 
-                <!-- Chat Sidebar -->
+                <!-- Side Panel (Chat and People) -->
                 <div id="side-panel">
                     <div class="panel-header">
                         <h4 id="panel-title">Chat</h4>
-                        <i class="fas fa-times" style="cursor: pointer;" onclick="toggleChat(false)"></i>
+                        <i class="fas fa-times" style="cursor: pointer;" onclick="closeSidePanel()"></i>
                     </div>
-                    <div class="panel-content" id="chat-content">
-                        <div id="chat-messages"></div>
+
+                    <!-- Chat Container -->
+                    <div id="chat-container">
+                        <div class="panel-content" id="chat-content">
+                            <div id="chat-messages"></div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-input" placeholder="Type a message..."
+                                onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                            <i class="fas fa-paper-plane"
+                                style="color: var(--teams-purple); cursor: pointer; align-self: center;"
+                                onclick="sendChatMessage()"></i>
+                        </div>
                     </div>
-                    <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="Type a message..."
-                            onkeypress="if(event.key === 'Enter') sendChatMessage()">
-                        <i class="fas fa-paper-plane"
-                            style="color: var(--teams-purple); cursor: pointer; align-self: center;"
-                            onclick="sendChatMessage()"></i>
+
+                    <!-- People Container -->
+                    <div id="people-container" style="display: none;">
+                        <div class="panel-content">
+                            <div id="participants-list"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -592,7 +751,13 @@
     <div id="join-modal">
         <div class="modal-content">
             <h2 id="modal-title">Join Meeting</h2>
-            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Please enter the room name to continue.</p>
+            <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Please enter the room name to continue.</p>
+            <p style="font-size: 14px; color: var(--teams-purple); margin-bottom: 20px; font-weight: bold;">
+                <i class="fas fa-user-circle"></i> Joining as: {{ username }}
+                <a href="/api/logout"
+                    style="font-size: 12px; color: #666; font-weight: normal; margin-left: 10px; text-decoration: underline;">(Switch
+                    Account)</a>
+            </p>
             <input type="text" id="room-input" placeholder="e.g. general-meeting">
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
                 <button class="btn btn-secondary" onclick="hideJoinModal()">Cancel</button>
@@ -608,6 +773,18 @@
         let activeRoom = null;
         let currentView = 'home';
         let modalMode = 'join';
+
+        function toggleProfileMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('profile-dropdown');
+            menu.classList.toggle('active');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            const menu = document.getElementById('profile-dropdown');
+            if (menu) menu.classList.remove('active');
+        });
 
         // --- Utility ---
         function log(msg) {
@@ -711,38 +888,107 @@
                 });
                 activeRoom.on('trackUnsubscribed', (track, pub, part) => {
                     track.detach().forEach(el => el.remove());
-                    // Also clean up video tiles if needed, though detach handles the video element
+                    // Cleanup tile
                     const isScreen = track.source === 'screen_share';
-                    const el = document.getElementById(`p-${part.identity}${isScreen ? '-screen' : ''}`);
+                    const safeIdentity = part.identity.replace(/[^a-zA-Z0-9-_]/g, '-');
+                    const id = `p-${safeIdentity}${isScreen ? '-screen' : ''}`;
+                    const el = document.getElementById(id);
                     if (el && track.kind === 'video') el.remove();
+                    updateLayout();
                 });
                 activeRoom.on('dataReceived', (payload, participant) => {
                     const text = new TextDecoder().decode(payload);
-                    log(`Chat from ${participant.identity}: ${text}`);
+                    const sender = participant ? participant.identity : "Unknown";
+                    console.log(`[DATA] Received from ${sender}:`, text);
 
-                    // Detect if it's a transcript
-                    if (text.startsWith("Transcript (")) {
-                        appendChatMessage("Transcription Agent", text.replace("Transcript ", ""), false, true);
+                    // Robust transcript detection: check for "Transcript (" prefix or if it's from a known agent
+                    const isTranscript = text.startsWith("Transcript (") ||
+                        sender.toLowerCase().includes('agent') ||
+                        sender.toLowerCase().includes('transcription');
+
+                    if (isTranscript) {
+                        // Clean up the text if it has the prefix
+                        let displayMsg = text;
+                        if (text.startsWith("Transcript (")) {
+                            // Extract just the part after the first colon if possible
+                            const colonIndex = text.indexOf("):");
+                            if (colonIndex !== -1) {
+                                displayMsg = text.substring(colonIndex + 2).trim();
+                            }
+                        }
+                        appendChatMessage(sender, displayMsg, false, true);
                     } else {
-                        appendChatMessage(participant.identity, text);
+                        appendChatMessage(sender, text);
                     }
                 });
+                activeRoom.on('participantConnected', (participant) => {
+                    log(`Participant connected: ${participant.identity}`);
+                    updateParticipantList();
+                });
                 activeRoom.on('participantDisconnected', (part) => {
-                    const el = document.getElementById(`p-${part.identity}`);
+                    log(`Participant disconnected: ${part.identity}`);
+                    updateParticipantList();
+                    const safeIdentity = part.identity.replace(/[^a-zA-Z0-9-_]/g, '-');
+                    const el = document.getElementById(`p-${safeIdentity}`);
                     if (el) el.remove();
+                    const screenEl = document.getElementById(`p-${safeIdentity}-screen`);
+                    if (screenEl) screenEl.remove();
+
+                    if (part.identity === activeRoom.localParticipant.identity) {
+                        alert("You have been disconnected. This often happens if you open the same account in another tab.");
+                    }
+                });
+
+                activeRoom.on('disconnected', (reason) => {
+                    log('Room disconnected: ' + reason);
+                    // Reason 2 is duplicate identity
+                    if (reason == 2 || reason === 'duplicate_identity') {
+                        alert("CRITICAL ERROR: You are logged in as the SAME USER in two tabs.\n\nPlease create a DIFFERENT account in Incognito mode to test video.");
+                    } else {
+                        alert(`Disconnected: ${reason}`);
+                    }
+                    leaveMeeting();
                 });
 
                 await activeRoom.connect(data.url, data.token);
                 log("Connected!");
+                updateParticipantList();
+
+                // Render existing participants (CRITICAL for visibility)
+                activeRoom.remoteParticipants.forEach(participant => {
+                    participant.trackPublications.forEach(pub => {
+                        if (pub.isSubscribed && pub.track) {
+                            log(`Rendering existing track ${pub.track.kind} for ${participant.identity}`);
+                            renderTrack(pub.track, participant);
+                        }
+                    });
+                });
 
                 // Fetch and display chat history
                 await fetchChatHistory(roomName);
 
-                await activeRoom.localParticipant.enableCameraAndMicrophone();
+                // Try to enable camera and mic, but fall back to mic-only if camera fails
+                try {
+                    await activeRoom.localParticipant.enableCameraAndMicrophone();
+                    log("Camera and Microphone enabled.");
+                } catch (e) {
+                    log("Failed to enable Camera/Mic: " + e.message);
+                    log("Attempting to join with Microphone only...");
+                    try {
+                        await activeRoom.localParticipant.setMicrophoneEnabled(true);
+                        log("Microphone enabled. Camera skipped due to hardware/permission error.");
+                        alert("Camera Error: " + e.message + "\n\nDon't worry, you have joined with Audio Only.");
+                    } catch (micErr) {
+                        log("CRITICAL: Failed to enable Microphone as well: " + micErr.message);
+                        alert("Hardware Error: Could not access Camera or Microphone. Please check your browser permissions or hardware connection.");
+                    }
+                }
 
-                // Render self
-                const camTrack = activeRoom.localParticipant.getTrackPublication(LK.Track.Source.Camera).videoTrack;
-                if (camTrack) renderTrack(camTrack, activeRoom.localParticipant, true);
+                // Render self only if camera was successfully enabled
+                const camPub = activeRoom.localParticipant.getTrackPublication(LK.Track.Source.Camera);
+                if (camPub && camPub.videoTrack) {
+                    renderTrack(camPub.videoTrack, activeRoom.localParticipant, true);
+                }
 
             } catch (err) {
                 log("Error joining: " + err.message);
@@ -792,14 +1038,33 @@
             }
 
             const isScreen = track.source === 'screen_share';
-            const id = `p-${participant.identity}${isScreen ? '-screen' : ''}`;
+            const safeIdentity = participant.identity.replace(/[^a-zA-Z0-9-_]/g, '-');
+            const id = `p-${safeIdentity}${isScreen ? '-screen' : ''}`;
 
             let tile = document.getElementById(id);
             if (!tile) {
                 tile = document.createElement('div');
                 tile.id = id;
                 tile.className = 'participant-tile';
-                if (isScreen) tile.style.gridColumn = "span 2"; // Make screen share larger
+                if (isScreen) {
+                    tile.classList.add('screen-share');
+                    // Removed grid-column style as CSS now handles it
+                }
+
+                // Fullscreen button
+                const fsBtn = document.createElement('button');
+                fsBtn.className = 'fullscreen-btn';
+                fsBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                fsBtn.title = "Toggle Fullscreen";
+                fsBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!document.fullscreenElement) {
+                        tile.requestFullscreen().catch(err => console.error(err));
+                    } else {
+                        document.exitFullscreen();
+                    }
+                };
+                tile.appendChild(fsBtn);
 
                 const nameTag = document.createElement('div');
                 nameTag.className = 'name-tag';
@@ -810,25 +1075,134 @@
             }
 
             const videoEl = track.attach();
+            videoEl.onplay = () => log(`Video playing for ${participant.identity} (${track.kind})`);
+            videoEl.onerror = (e) => log(`Video error for ${participant.identity}: ${e.target.error.message}`);
             if (isLocal && !isScreen) videoEl.style.transform = "scaleX(-1)";
 
             const existing = tile.querySelector('video');
             if (existing) existing.remove();
 
             tile.appendChild(videoEl);
+
+            // Ensure name tag and fullscreen button are ON TOP by re-appending them
+            const nameTag = tile.querySelector('.name-tag');
+            if (nameTag) tile.appendChild(nameTag);
+
+            const fsBtn = tile.querySelector('.fullscreen-btn');
+            if (fsBtn) tile.appendChild(fsBtn);
+
+            // Update layout after adding track
+            updateLayout();
         }
 
-        // --- Chat Logic ---
+        function updateLayout() {
+            const grid = document.getElementById('video-grid');
+            const screenShare = grid.querySelector('.screen-share');
+
+            if (screenShare) {
+                grid.classList.add('screen-share-active');
+                // Move screen share to start so it takes the main slot
+                grid.prepend(screenShare);
+            } else {
+                grid.classList.remove('screen-share-active');
+            }
+        }
+
+        // --- Side Panel Logic (Chat & People) ---
+        let activePanelType = null; // 'chat' or 'people'
+
         function toggleChat(force) {
+            if (activePanelType === 'chat' && force !== true) {
+                closeSidePanel();
+            } else {
+                openSidePanel('chat');
+            }
+        }
+
+        function togglePeople() {
+            if (activePanelType === 'people') {
+                closeSidePanel();
+            } else {
+                openSidePanel('people');
+                updateParticipantList();
+            }
+        }
+
+        function openSidePanel(type) {
+            activePanelType = type;
             const panel = document.getElementById('side-panel');
-            const isActive = typeof force === 'boolean' ? force : !panel.classList.contains('active');
+            const title = document.getElementById('panel-title');
+            const chatCont = document.getElementById('chat-container');
+            const peopleCont = document.getElementById('people-container');
+            const chatBtn = document.getElementById('chat-toggle-btn');
+            const peopleBtn = document.getElementById('people-toggle-btn');
 
-            if (isActive) panel.classList.add('active');
-            else panel.classList.remove('active');
+            panel.classList.add('active');
 
-            const btn = document.getElementById('chat-toggle-btn');
-            btn.style.color = isActive ? 'var(--teams-purple)' : 'white';
-            btn.style.background = isActive ? 'white' : '#3D3D3D';
+            if (type === 'chat') {
+                title.innerText = "Chat";
+                chatCont.style.display = 'flex';
+                chatCont.style.flexDirection = 'column';
+                chatCont.style.height = 'calc(100% - 60px)';
+                peopleCont.style.display = 'none';
+
+                chatBtn.style.color = 'var(--teams-purple)';
+                chatBtn.style.background = 'white';
+                peopleBtn.style.color = 'white';
+                peopleBtn.style.background = '#3D3D3D';
+            } else {
+                title.innerText = "Participants";
+                chatCont.style.display = 'none';
+                peopleCont.style.display = 'block';
+
+                peopleBtn.style.color = 'var(--teams-purple)';
+                peopleBtn.style.background = 'white';
+                chatBtn.style.color = 'white';
+                chatBtn.style.background = '#3D3D3D';
+            }
+        }
+
+        function closeSidePanel() {
+            activePanelType = null;
+            document.getElementById('side-panel').classList.remove('active');
+
+            const chatBtn = document.getElementById('chat-toggle-btn');
+            const peopleBtn = document.getElementById('people-toggle-btn');
+
+            chatBtn.style.color = 'white';
+            chatBtn.style.background = '#3D3D3D';
+            peopleBtn.style.color = 'white';
+            peopleBtn.style.background = '#3D3D3D';
+        }
+
+        function updateParticipantList() {
+            if (!activeRoom) return;
+            const container = document.getElementById('participants-list');
+            if (!container) return;
+
+            const participants = [
+                activeRoom.localParticipant,
+                ...Array.from(activeRoom.remoteParticipants.values())
+            ];
+
+            container.innerHTML = participants.map(p => {
+                const isLocal = p === activeRoom.localParticipant;
+                const identity = p.identity || "Unknown";
+                const safeIdentity = identity.replace(/[^a-zA-Z0-9-_]/g, '-');
+                const isAgent = identity.toLowerCase().includes('agent') || identity.toLowerCase().includes('interviewer');
+
+                return `
+                    <div class="participant-row" style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: ${isAgent ? '#444' : 'var(--teams-purple)'}; color: white; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold;">
+                            ${identity.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 14px;">${identity}${isLocal ? ' (You)' : ''}</div>
+                            <div style="font-size: 11px; color: #666;">${isAgent ? 'AI Assistant' : 'Participant'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         async function sendChatMessage() {
@@ -938,6 +1312,46 @@
             const urlParams = new URLSearchParams(window.location.search);
             const r = urlParams.get('room');
             if (r) joinRoom(r);
+
+            // AI Interviewer Form Handler
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const btn = document.getElementById('prep-btn');
+                    const resumeFile = document.getElementById('resumeInput').files[0];
+                    const jdText = document.getElementById('jdInput').value;
+
+                    if (!resumeFile || !jdText) return alert("Please upload a resume and paste the job description.");
+
+                    btn.innerText = "Analyzing...";
+                    btn.disabled = true;
+
+                    const formData = new FormData();
+                    formData.append('resume', resumeFile);
+                    formData.append('jd', jdText);
+
+                    try {
+                        const response = await fetch('/api/upload-resume', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+                        if (result.status === 'success') {
+                            alert(result.message);
+                            joinRoom(result.room_id);
+                        } else {
+                            alert("Error: " + (result.error || "Failed to analyze"));
+                        }
+                    } catch (err) {
+                        alert("Failed to connect to server: " + err.message);
+                    } finally {
+                        btn.innerText = "Prepare Interview";
+                        btn.disabled = false;
+                    }
+                };
+            }
         };
     </script>
 </body>
