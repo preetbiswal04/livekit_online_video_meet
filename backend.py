@@ -197,7 +197,10 @@ def upload_resume():
         room_id = str(uuid.uuid4())[:8]
         db_helper.create_session(room_id=room_id,candidate_name=resume_json.get("Name","Candidate"),resume_data=resume_json,questions=questions)
         return jsonify({"room_id":room_id,"status":"success","message":"analysis completed redirecting to interview..."})
-        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
