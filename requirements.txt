@@ -1,16 +1,24 @@
-livekit-plugins-elevenlabs
-livekit-plugins-openai
-python-dotenv
 flask
 flask-cors
 gunicorn
-livekit-plugins-deepgram
-livekit-agents
-livekit-plugins-deepgram
-livekit-plugins-silero
 python-dotenv
-python "backend.py"
-python transcription_agent.py dev
 pymongo
 motor
-#command for databse run : & "C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe" --dbpath "c:\Users\preet\Downloads\live_kit\mongo_data"
+numpy
+pdfplumber
+python-docx
+streamlit
+
+# Google / Vertex AI
+google-generativeai
+google-cloud-aiplatform
+google-auth
+
+# LiveKit
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-deepgram
+livekit-plugins-elevenlabs
+livekit-plugins-silero
+# livekit-plugins-cartesia (Assuming this is needed since we used it in code)
+livekit-plugins-cartesia
