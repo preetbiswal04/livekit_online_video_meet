@@ -2,17 +2,11 @@ import google.generativeai as genai
 import os
 import json
 import re
+from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
 
-genai.configure(api_key=os.getenv("gemini_api_key"))
+model = get_gemini_fast_model()
 
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
 
-model = genai.GenerativeModel("gemini-2.0-flash")
 
 def jd_prase(jd_text):
     prompt = f"""
@@ -27,7 +21,7 @@ def jd_prase(jd_text):
 
     {jd_text}
     """
-    response = model.generate_content(prompt, safety_settings=safety_settings)
+    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
     
     # Check if blocked
     if not response.candidates or not response.candidates[0].content.parts:
