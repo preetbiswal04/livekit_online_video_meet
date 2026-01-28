@@ -1,17 +1,13 @@
 import google.generativeai as genai
+import os
+import json
+import reimport google.generativeai as genai
 import os 
+from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
 
-genai.configure(api_key=os.getenv("gemini_api_key"))
+model = get_gemini_fast_model()
 
-# Safety settings to prevent technical content from being blocked
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
 
-model = genai.GenerativeModel("gemini-2.0-flash")
 
 def generate_questions(resume_json, jd_json):
     prompt = f"""
@@ -44,10 +40,45 @@ Return only questions in JSON format.
     Job description information:
     {jd_json}
     """
-    response = model.generate_content(prompt, safety_settings=safety_settings)
+    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
     
     # Robust check for blocked content
     if not response.candidates or not response.candidates[0].content.parts:
         return "Error: The response was blocked by Gemini safety filters or failed to generate. Try rephrasing your input."
         
     return response.text
+
+from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
+
+model = get_gemini_fast_model()
+
+
+
+def jd_prase(jd_text):
+    prompt = f"""
+    Extract the following information from the resume:
+    -job title
+    -job role
+    -Required skills
+    -Required experience
+    -Required education
+
+    Return strict in JSON format
+
+    {jd_text}
+    """
+    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
+    
+    # Check if blocked
+    if not response.candidates or not response.candidates[0].content.parts:
+        return {"error": "Content blocked by safety filters"}
+
+    text = response.text
+    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+    if json_match:
+        text = json_match.group(0)
+    
+    try:
+        return json.loads(text)
+    except Exception:
+        return {"error": "Failed to parse JSON", "raw": response.text}
