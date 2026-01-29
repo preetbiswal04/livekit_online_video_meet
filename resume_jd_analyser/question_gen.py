@@ -1,9 +1,8 @@
 import google.generativeai as genai
-import os
-import json
-import reimport google.generativeai as genai
 import os 
 from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
+import re 
+from dotenv import load_dotenv
 
 model = get_gemini_fast_model()
 
@@ -82,3 +81,4 @@ def jd_prase(jd_text):
         return json.loads(text)
     except Exception:
         return {"error": "Failed to parse JSON", "raw": response.text}
+
