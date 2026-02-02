@@ -1,3 +1,4 @@
+
 import asyncio
 import os
 import sys
@@ -17,7 +18,7 @@ load_dotenv()
 key_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),"service_account_key.json")
 if os.path.exists(key_path):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
-    os.environ["GOOGLE_CLOUD_PROJECT"] = "gen-lang-client-0483740570"
+    os.environ["GOOGLE_CLOUD_PROJECT"] = "balmy-amp-481707-p6"
     os.environ["GOOGLE_CLOUD_LOCATION"] = "us-central1" 
     print(f"--- [DEBUG] Vertex AI Credentials set: {key_path}")
 else:
@@ -32,10 +33,7 @@ async def entrypoint(ctx: JobContext):
     print(f"--- [DEBUG] Room {ctx.room.name}: STARTING ENTRYPOINT ---")
     
     
-    # keys = ["GOOGLE_API_KEY", "CARTESIA_API_KEY", "DEEPGRAM_API_KEY"]
-    # for k in keys:
-    #     val = os.getenv(k)
-    #     print(f"--- [DEBUG] {k}: {'FOUND' if val else 'MISSING!'}")
+
 
     try:
         print("--- [DEBUG] Attempting to connect to room...")
@@ -66,14 +64,15 @@ Rules:
 - Do NOT ask questions outside the Job Description and Resume (no extra technologies, frameworks, or concepts).
 - If a skill is mentioned briefly, ask basic and easy questions about it.
 - If a skill is emphasized or repeated, ask in-depth technical questions.
+- If a candidate is not able to answer a question, if he say okay or move to next question, then ask next question.
 
 The questions should go like this :
 -There should be total 10 questions.
 -The start of interview should be by introduction of role and comapny and ask candidate introduces them self.
--Then ask 3 questions from each project mentioned in resume.
--Then ask 3 question from tools and skills mentioned in resume.
+-Then ask 3 questions from mentioned in job description.
+-Then ask 3 question from tools and skills mentioned in job description.
 -Then ask 2 technical questions from job description.
--Then ask 2 questions from experience mentioned in resume."""
+-Then ask 2 questions from experience mentioned in job description."""
     else:
         print(f"--- [DEBUG] Found session data for {interviewer_data.get('candidate_name')}")
         system_prompt = f"""You are a professional AI Technical Interviewer.
@@ -152,9 +151,11 @@ The questions should go like this :
         print("--- [DEBUG] Greeting sent.")
     except Exception as e:
         print(f"--- [ERROR] Speech Failed: {e}")
+        
+    print("--- [DEBUG] Agent waiting for START signal...")
 
     print("--- [DEBUG] Agent running... waiting for shutdown.")
-    await ctx.wait_for_shutdown()
+    await asyncio.get_running_loop().create_future()
 
 if __name__ == "__main__":
     print("--- Starting Diagnositc Interviewer Agent ---")
