@@ -19,14 +19,15 @@ Rules:
 - Do NOT ask questions outside the Job Description and Resume (no extra technologies, frameworks, or concepts).
 - If a skill is mentioned briefly, ask basic and easy questions about it.
 - If a skill is emphasized or repeated, ask in-depth technical questions.
+- If a candidate is not able to answer a question, if he say okay or move to next question, then ask next question.
 
 The questions should go like this :
 -There should be total 10 questions.
 -The start of interview should be by introduction of role and comapny and ask candidate introduces them self.
--Then ask 3 questions from each project mentioned in resume.
--Then ask 3 question from tools and skills mentioned in resume.
+-Then ask 3 questions from mentioned in job description.
+-Then ask 3 question from tools and skills mentioned in job description.
 -Then ask 2 technical questions from job description.
--Then ask 2 questions from experience mentioned in resume.
+-Then ask 2 questions from experience mentioned in job description
 
 Return only questions in JSON format.
 
@@ -46,39 +47,3 @@ Return only questions in JSON format.
         return "Error: The response was blocked by Gemini safety filters or failed to generate. Try rephrasing your input."
         
     return response.text
-
-from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
-
-model = get_gemini_fast_model()
-
-
-
-def jd_prase(jd_text):
-    prompt = f"""
-    Extract the following information from the resume:
-    -job title
-    -job role
-    -Required skills
-    -Required experience
-    -Required education
-
-    Return strict in JSON format
-
-    {jd_text}
-    """
-    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
-    
-    # Check if blocked
-    if not response.candidates or not response.candidates[0].content.parts:
-        return {"error": "Content blocked by safety filters"}
-
-    text = response.text
-    json_match = re.search(r'\{.*\}', text, re.DOTALL)
-    if json_match:
-        text = json_match.group(0)
-    
-    try:
-        return json.loads(text)
-    except Exception:
-        return {"error": "Failed to parse JSON", "raw": response.text}
-
