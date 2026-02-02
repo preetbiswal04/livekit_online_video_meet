@@ -38,7 +38,7 @@ def get_gemini_fast_model():
         print(f"loading credentials from {key_path}")
         credentials = service_account.Credentials.from_service_account_file(key_path)
         vertexai.init(
-            project = "gen-lang-client-0483740570",
+            project = "balmy-amp-481707-p6",
             location = "us-central1",
             credentials = credentials
         )
