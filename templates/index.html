@@ -601,8 +601,7 @@
             <span>Calls</span>
         </div>
     </nav>
-
-    <!-- Main Shell -->
+    
     <div id="app-shell">
         <header>
             <div style="font-weight: bold; color: var(--teams-purple); font-size: 18px;"> Teams Meetings <span
@@ -627,7 +626,7 @@
         </header>
 
         <main id="content">
-            <!-- Home View -->
+
             <div id="home-view" class="view active">
                 <div style="margin-bottom: 30px;">
                     <h1 style="font-size: 24px; margin-bottom: 8px;">Hello Welcome back, {{ username }}</h1>
@@ -672,7 +671,7 @@
                 </div>
             </div>
 
-            <!-- Meeting View -->
+
             <div id="meeting-view" class="view">
                 <div class="meeting-main">
                     <div class="meeting-header">
@@ -692,7 +691,7 @@
                     </div>
 
                     <div id="video-grid">
-                        <!-- Participant tiles will be injected here -->
+
                     </div>
 
                     <div class="meeting-controls">
@@ -715,14 +714,14 @@
                     </div>
                 </div>
 
-                <!-- Side Panel (Chat and People) -->
+
                 <div id="side-panel">
                     <div class="panel-header">
                         <h4 id="panel-title">Chat</h4>
                         <i class="fas fa-times" style="cursor: pointer;" onclick="closeSidePanel()"></i>
                     </div>
 
-                    <!-- Chat Container -->
+
                     <div id="chat-container">
                         <div class="panel-content" id="chat-content">
                             <div id="chat-messages"></div>
@@ -736,7 +735,7 @@
                         </div>
                     </div>
 
-                    <!-- People Container -->
+
                     <div id="people-container" style="display: none;">
                         <div class="panel-content">
                             <div id="participants-list"></div>
@@ -949,6 +948,35 @@
                     }
                     leaveMeeting();
                 });
+
+                // --- AUTO MUTE LOGIC WITH DELAY ---
+                let unmuteTimeout = null;
+                const UNMUTE_DELAY_MS = 1200; // 1.5 seconds delay
+
+                activeRoom.on(LK.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+                    const agentSpeaking = speakers.some(p => p.identity.toLowerCase().includes('agent') || p.identity.toLowerCase().includes('interviewer'));
+
+                    if (agentSpeaking) {
+                        if (unmuteTimeout) { clearTimeout(unmuteTimeout); unmuteTimeout = null; }
+                        if (activeRoom.localParticipant.isMicrophoneEnabled) {
+                            console.log("Agent speaking - Muting user");
+                            activeRoom.localParticipant.setMicrophoneEnabled(false);
+                            const btn = document.getElementById('mic-btn');
+                            if (btn) { btn.innerHTML = '<i class="fas fa-microphone-slash"></i>'; btn.style.background = '#C4314B'; }
+                        }
+                    } else {
+                        if (!activeRoom.localParticipant.isMicrophoneEnabled && !unmuteTimeout) {
+                            console.log(`Agent stopped - Waiting ${UNMUTE_DELAY_MS}ms...`);
+                            unmuteTimeout = setTimeout(() => {
+                                activeRoom.localParticipant.setMicrophoneEnabled(true);
+                                const btn = document.getElementById('mic-btn');
+                                if (btn) { btn.innerHTML = '<i class="fas fa-microphone"></i>'; btn.style.background = '#3D3D3D'; }
+                                unmuteTimeout = null;
+                            }, UNMUTE_DELAY_MS);
+                        }
+                    }
+                });
+
 
                 await activeRoom.connect(data.url, data.token);
                 log("Connected!");
