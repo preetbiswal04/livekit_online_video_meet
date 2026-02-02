@@ -22,19 +22,16 @@ def prase_resume(resume_text):
 
     {resume_text}
     """
-    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
     
-    # Check if blocked
-    if not response.candidates or not response.candidates[0].content.parts:
-        return {"error": "Content blocked by safety filters"}
 
-    # Cleaning the response text to extract only JSON
+    response = model.generate_content(prompt, safety_settings=SAFETY_SETTINGS)
+    if not response.candidates or not response.candidates[0].content.parts:
+        return {"error": "Content blocked by safety settings"}
     text = response.text
     json_match = re.search(r'\{.*\}', text, re.DOTALL)
-    if json_match:
+    if json_match :
         text = json_match.group(0)
-    
     try:
         return json.loads(text)
-    except Exception:
+    except Exception as e:
         return {"error": "Failed to parse JSON", "raw": response.text}
