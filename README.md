@@ -10,118 +10,84 @@ A real-time video meeting platform with live speech-to-text transcription powere
 - 📝 Automatic transcript logging
 - 🎨 Modern Microsoft Teams-inspired UI
 
-## Prerequisites
+# LiveKit AI Interviewer - Setup Guide
 
-- Python 3.11+
-- LiveKit Cloud account (or self-hosted LiveKit server)
-- Deepgram API key
+This guide explains how to set up the AI Interviewer application on a new machine (Windows/Mac/Linux).
 
-## Installation
+## 1. Prerequisites / Requirements
 
-1. **Clone the repository**
-```bash
-git clone <your-repo-url>
-cd live_kit
+Ensure the following are installed on the new machine:
+*   **Python 3.10+**: [Download Python](https://www.python.org/downloads/)
+*   **MongoDB**: Using a cloud Atlas database (no local install needed) or install MongoDB Community Server locally.
+*   **Git**: [Download Git](https://git-scm.com/downloads) (Optional, for cloning)
+*   **Google Cloud SDK** (Optional, for advanced auth, but we use a JSON key file here)
+
+## 2. Project Setup
+
+1.  **Copy the Project Files**:
+    *   Copy the entire project folder to the new machine.
+    *   *Critical:* Ensure the `service_account_key.json` file (Google Vertex AI credentials) is included in the project root.
+
+2.  **Create a Virtual Environment**:
+    Open a terminal/command prompt in the project folder:
+    ```bash
+    python -m venv venv
+    ```
+
+3.  **Activate the Virtual Environment**:
+    *   **Windows:**
+        ```powershell
+        .\venv\Scripts\activate
+        ```
+    *   **Mac/Linux:**
+        ```bash
+        source venv/bin/activate
+        ```
+
+4.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 3. Configuration (.env)
+
+Create a file named `.env` in the root folder and add your API keys. You can copy the content below:
+
+```ini
+# LiveKit Configuration
+LIVEKIT_API_URL=wss://your-project-url.livekit.cloud
+LIVEKIT_API_KEY=your_api_key
+LIVEKIT_API_SECRET=your_api_secret
+LIVEKIT_URL=wss://your-project-url.livekit.cloud
+
+# Database
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGO_DB_NAME=livekit_chat
+
+# AI Services
+DEEPGRAM_API_KEY=your_deepgram_key
+CARTESIA_API_KEY=your_cartesia_key
+
+# Google Vertex AI (Authentication handled via JSON key file, but path set here)
+GOOGLE_APPLICATION_CREDENTIALS=service_account_key.json
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
 ```
 
-2. **Create virtual environment**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+## 4. Running the Application
 
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
+To start the full application (Backend + AI Agent):
 
-4. **Configure environment variables**
-```bash
-cp .env.example .env
-```
+1.  Make sure your virtual environment is activated.
+2.  Run the unified runner script:
+    ```bash
+    python run_app.py
+    ```
+3.  The Flask server will start on `http://127.0.0.1:5000`.
+4.  The Agent is now waiting for a room connection.
 
-Edit `.env` and add your API keys:
-```
-LIVEKIT_API_KEY=your_livekit_api_key
-LIVEKIT_API_SECRET=your_livekit_api_secret
-LIVEKIT_API_URL=wss://your-server.livekit.cloud
-DEEPGRAM_API_KEY=your_deepgram_api_key
-```
+## 5. Usage
+1.  Open `http://127.0.0.1:5000` in your browser.
+2.  Upload a Resume and Job Description.
+3.  Click "Start Interview" to join the LiveKit room.
 
-## Usage
-
-### 1. Start the Web Server
-```bash
-python app.py
-```
-Access the UI at `http://localhost:5000`
-
-### 2. Start the Transcription Agent
-In a separate terminal:
-```bash
-python transcription_agent.py dev
-```
-
-### 3. Join a Meeting
-- Open `http://localhost:5000` in your browser
-- Create or join a room
-- Click the chat icon to view live transcripts
-
-## Project Structure
-
-```
-live_kit/
-├── app.py                    # Flask web server
-├── transcription_agent.py    # Deepgram STT agent
-├── templates/
-│   └── index.html           # Frontend UI
-├── requirements.txt         # Python dependencies
-├── .env.example            # Environment template
-└── transcripts.log         # Saved transcripts
-```
-
-## Deployment
-
-See [AWS Deployment Guide](aws_deployment_guide.md) for production deployment instructions.
-
-## Configuration
-
-### Transcription Settings
-Edit `transcription_agent.py`:
-- `interim_results=True` - Show live updates (lower latency, more messages)
-- `interim_results=False` - Show only final transcripts (cleaner, slight delay)
-- `model="nova-2"` - Fast model for low latency
-
-## Logs
-
-All final transcripts are saved to `transcripts.log`:
-```
-user-123: Hello everyone
-user-456: How are you doing today
-```
-
-## Troubleshooting
-
-### Agent not connecting
-- Verify `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` in `.env`
-- Check LiveKit server URL is correct
-
-### No transcriptions appearing
-- Verify `DEEPGRAM_API_KEY` is valid
-- Check agent terminal for errors
-- Ensure microphone permissions are granted in browser
-
-### Chat not showing transcripts
-- Click the chat icon (message bubble) in the meeting UI
-- Check browser console for errors
-
-## License
-
-MIT
-
-## Credits
-
-Built with:
-- [LiveKit](https://livekit.io/) - Real-time video infrastructure
-- [Deepgram](https://deepgram.com/) - Speech-to-text API
-- [Flask](https://flask.palletsprojects.com/) - Web framework
