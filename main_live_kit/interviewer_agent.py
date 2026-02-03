@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 import sys
@@ -123,13 +122,27 @@ The questions should go like this :
     def on_user_transcript(event: UserInputTranscribedEvent):
         if event.is_final:
             print(f"[TRANSCRIPT] Candidate: {event.transcript}")
-            db_helper.log_message(room_name, "candidate", event.transcript)
 
     @session.on("conversation_item_added")
     def on_item_added(event: ConversationItemAddedEvent):
-        if isinstance(event.item, llm.ChatMessage) and event.item.role == "assistant":
-            print(f"[REPLY] Interviewer: {event.item.content}")
-            db_helper.log_message(room_name, "interviewer", event.item.content)
+        if isinstance(event.item, llm.ChatMessage):
+            if event.item.role == "system":
+                return
+            
+            role = event.item.role
+            content = event.item.content
+            
+            # Convert list content (multi-modal) to string if necessary
+            if isinstance(content, list):
+                content = " ".join([str(c) for c in content])
+            
+            print(f"[{role.upper()}] {content}")
+            
+            # Log both candidate (user) and interviewer (assistant) full messages
+            if role == "user":
+                 db_helper.log_message(room_name, "candidate", content)
+            elif role == "assistant":
+                 db_helper.log_message(room_name, "interviewer", content)
 
     print("--- [DEBUG] Starting Session logic...")
     try:
@@ -151,7 +164,7 @@ The questions should go like this :
         print("--- [DEBUG] Greeting sent.")
     except Exception as e:
         print(f"--- [ERROR] Speech Failed: {e}")
-        
+
     print("--- [DEBUG] Agent waiting for START signal...")
 
     print("--- [DEBUG] Agent running... waiting for shutdown.")
