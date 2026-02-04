@@ -101,7 +101,7 @@ INTERVIEW STRUCTURE (10 Questions Total):
         
         print("--- [DEBUG] Initializing TTS (Cartesia)...")
        
-        tts_plugin = cartesia.TTS()
+        tts_plugin = deepgram.TTS()
         
         print("--- [DEBUG] Initializing VAD (Silero)...")
         vad_plugin = silero.VAD.load()
@@ -169,7 +169,21 @@ INTERVIEW STRUCTURE (10 Questions Total):
     except Exception as e:
         print(f"--- [ERROR] Speech Failed: {e}")
 
-
+    # @ctx.room.on("data_received")
+    # def on_data_received(data_packet):
+    #     message=data_packet.data.decode("utf-8")
+    #     if message == "START_INTERVIEW":
+    #         print("---[AGENT] start singal received.")
+    #         async def _start_task():
+    #             name = interviewer_data.get('candidate_name', 'there') if interviewer_data else 'there'
+    #             greeting = f"Hello {name}, I am your AI interviewer today. Let's begin!"
+    #             print(f"--- [DEBUG] Sending greeting: {greeting}")
+                
+    #             await session.say(greeting, allow_interruptions=True)
+    #             # Trigger the LLM to ask the first question immediately after greeting
+    #             session.generate_reply() 
+            
+    #         asyncio.create_task(_start_task())
     print("--- [DEBUG] Agent waiting for START signal...")
 
     print("--- [DEBUG] Agent running... waiting for shutdown.")
