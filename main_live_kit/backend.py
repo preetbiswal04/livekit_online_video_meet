@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, render_template, request, session, url_for, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
@@ -193,7 +194,7 @@ def upload_resume():
         questions = generate_questions(resume_json,jd_text)
 
         room_id = str(uuid.uuid4())[:8]
-        db_helper.create_session(room_id=room_id,candidate_name=resume_json.get("Name","Candidate"),resume_data=resume_json,questions=questions)
+        db_helper.create_session(room_id=room_id,candidate_name=resume_json.get("Name","Candidate"),resume_data=resume_json,questions=questions, jd_data=jd_text)
         return jsonify({"room_id":room_id,"status":"success","message":"analysis completed redirecting to interview..."})
     except Exception as e:
         import traceback
