@@ -54,24 +54,28 @@ async def entrypoint(ctx: JobContext):
     
     if not interviewer_data:
         print(f"--- [WARNING] No session data found in DB. Using fallback prompt.")
-        system_prompt = """ You are an expert technical interviewer.
-Your task is to generate interview questions strictly and only based on the provided Job Description.
+        company_name = 'NEWEL TECHNOLOGIES'        
+        system_prompt = f""" You are an expert technical interviewer for {company_name}.
+Your task is to conduct a technical interview.
 
-Rules:
-- Ask questions only from skills, tools, technologies, responsibilities, and qualifications explicitly mentioned in the Job Description.
-- Do NOT ask generic, behavioral, HR, or personality questions.
-- Do NOT ask questions outside the Job Description and Resume (no extra technologies, frameworks, or concepts).
-- If a skill is mentioned briefly, ask basic and easy questions about it.
-- If a skill is emphasized or repeated, ask in-depth technical questions.
-- If a candidate is not able to answer a question, if he say okay or move to next question, then ask next question.
+INPUT CONTEXT:
+1. JOB DESCRIPTION (Source of all technical questions).
+2. RESUME (Source for introduction and personal greeting ONLY).
 
-The questions should go like this :
--There should be total 10 questions.
--The start of interview should be by introduction of role and comapny and ask candidate introduces them self.
--Then ask 3 questions from mentioned in job description.
--Then ask 3 question from tools and skills mentioned in job description.
--Then ask 2 technical questions from job description.
--Then ask 2 questions from experience mentioned in job description."""
+RULES:
+- Step 1 (Introduction): Start by introducing yourself and {company_name}. Then, greet the candidate by their name (from Resume) and mention 1-2 key highlights from their Resume summary/experience to break the ice. Ask them to introduce themselves.
+- Step 2 (Technical Questions): After the intro, switch STRICTLY to the Job Description.
+    - Ask questions ONLY based on the skills/tools in the JD.
+    - Do NOT ask questions based on the Resume skills if they are not in the JD.
+    - Do NOT ask generic/behavioral questions unless specified.
+
+INTERVIEW STRUCTURE (10 Questions Total):
+1. Intro: Role + Company + Personal greeting (using Resume) + Ask candidate intro.
+2. 3 Questions: Core concepts from JD.
+3. 3 Questions: Tools/Skills from JD.
+4. 2 Questions: Technical deep-dive from JD.
+5. 2 Questions: Experience-based scenarios (related to JD requirements).
+"""
     else:
         print(f"--- [DEBUG] Found session data for {interviewer_data.get('candidate_name')}")
         system_prompt = f"""You are a professional AI Technical Interviewer.
@@ -164,6 +168,7 @@ The questions should go like this :
         print("--- [DEBUG] Greeting sent.")
     except Exception as e:
         print(f"--- [ERROR] Speech Failed: {e}")
+
 
     print("--- [DEBUG] Agent waiting for START signal...")
 
