@@ -200,9 +200,32 @@ def upload_resume():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
-    finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
-            
+
+@app.route('/api/evaluations', methods=['GET'])
+def get_evaluations():
+    try:
+        sessions_cursor = db_helper.collection.find({"evaluation": {"$exists": True}}).sort("_id", -1)
+        evaluations = []
+        for session in sessions_cursor:
+            eval_data = session.get('evaluation', {})
+            evaluations.append({
+                "room_id": session.get("room_id"),
+                "candidate_name": session.get("candidate_name", "Unknown"),
+                "timestamp": session.get("_id").generation_time.isoformat(), 
+                "overall_score": eval_data.get("overall_score"),
+                "recommendation": eval_data.get("recommendation"),
+                "summary": eval_data.get("summary"),
+                "detailed_feedback": eval_data.get("detailed_feedback"),
+                "transcript": session.get("transcript") 
+            })
+        
+        return jsonify(evaluations)
+    except Exception as e:
+        print(f"Error fetching evaluations: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
