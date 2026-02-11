@@ -85,9 +85,16 @@ class InterviewSession:
                          )
         
         # Default: Push new
+        # Default: Push new
         return self.collection.update_one(
-            {"room_id": room_id},
-            {"$push": {"transcript": {"text": text, "role": role}}}
+             {"room_id": room_id},
+             {"$push": {"transcript": {"text": text, "role": role}}}
         )
 
+    def save_evaluation(self, room_id, evaluation_data):
+        return self.collection.update_one(
+            {"room_id": room_id},
+            {"$set": {"evaluation": evaluation_data}}
+        )
+        
 db_helper = InterviewSession()
