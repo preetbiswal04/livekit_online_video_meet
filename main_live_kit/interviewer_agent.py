@@ -3,14 +3,21 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-
+import json 
 # Add project root to sys.path to find resume_jd_analyser
 root_path = Path(__file__).parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
-
 from livekit.agents import JobContext, Agent, AgentSession, llm, WorkerOptions, cli, UserInputTranscribedEvent, ConversationItemAddedEvent, AutoSubscribe
 from livekit.plugins import deepgram, google, cartesia, silero
+# Fix import to point to the local file in the same directory or package
+try:
+    from .evaluation_gen import evaluate_candidate
+except ImportError:
+    try:
+        from main_live_kit.evaluation_gen import evaluate_candidate
+    except ImportError:
+         from evaluation_gen import evaluate_candidate
 
 load_dotenv()
 
@@ -31,9 +38,6 @@ if os.getenv("cartesia_api_key") and not os.getenv("CARTESIA_API_KEY"):
 async def entrypoint(ctx: JobContext):
     print(f"--- [DEBUG] Room {ctx.room.name}: STARTING ENTRYPOINT ---")
     
-    
-
-
     try:
         print("--- [DEBUG] Attempting to connect to room...")
         await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -43,6 +47,7 @@ async def entrypoint(ctx: JobContext):
         return
     
     room_name = ctx.room.name
+    # Lazy import to avoid circular dependency if any, though likely fine here
     from resume_jd_analyser.db_utils import db_helper
     
     print(f"--- [DEBUG] Fetching session for room: {room_name}")
@@ -65,16 +70,16 @@ INPUT CONTEXT:
 RULES:
 - Step 1 (Introduction): Start by introducing yourself and {company_name}. Then, greet the candidate by their name (from Resume) and mention 1-2 key highlights from their Resume summary/experience to break the ice. Ask them to introduce themselves.
 - Step 2 (Technical Questions): After the intro, switch STRICTLY to the Job Description.
-    - Ask questions ONLY based on the skills/tools in the JD.
-    - Do NOT ask questions based on the Resume skills if they are not in the JD.
+    - Ask questions ONLY based on the skills/tools in the JOB DESCRIPTION.
+    - Do NOT ask questions based on the Resume skills if they are not in the JOB DESCRIPTION.
     - Do NOT ask generic/behavioral questions unless specified.
 
 INTERVIEW STRUCTURE (10 Questions Total):
 1. Intro: Role + Company + Personal greeting (using Resume) + Ask candidate intro.
-2. 3 Questions: Core concepts from JD.
-3. 3 Questions: Tools/Skills from JD.
-4. 2 Questions: Technical deep-dive from JD.
-5. 2 Questions: Experience-based scenarios (related to JD requirements).
+2. 3 Questions: Core concepts from JOB DESCRIPTION.
+3. 3 Questions: Tools/Skills from JOB DESCRIPTION.
+4. 2 Questions: Technical deep-dive from JOB DESCRIPTION.
+5. 2 Questions: Experience-based scenarios (related to JOB DESCRIPTION requirements).
 """
     else:
         print(f"--- [DEBUG] Found session data for {interviewer_data.get('candidate_name')}")
@@ -169,25 +174,58 @@ INTERVIEW STRUCTURE (10 Questions Total):
     except Exception as e:
         print(f"--- [ERROR] Speech Failed: {e}")
 
-    # @ctx.room.on("data_received")
-    # def on_data_received(data_packet):
-    #     message=data_packet.data.decode("utf-8")
-    #     if message == "START_INTERVIEW":
-    #         print("---[AGENT] start singal received.")
-    #         async def _start_task():
-    #             name = interviewer_data.get('candidate_name', 'there') if interviewer_data else 'there'
-    #             greeting = f"Hello {name}, I am your AI interviewer today. Let's begin!"
-    #             print(f"--- [DEBUG] Sending greeting: {greeting}")
-                
-    #             await session.say(greeting, allow_interruptions=True)
-    #             # Trigger the LLM to ask the first question immediately after greeting
-    #             session.generate_reply() 
-            
-    #         asyncio.create_task(_start_task())
+
     print("--- [DEBUG] Agent waiting for START signal...")
 
-    print("--- [DEBUG] Agent running... waiting for shutdown.")
-    await asyncio.get_running_loop().create_future()
+    print("--- [DEBUG] Agent running... waiting for shutdown/disconnect.")
+    
+    # Wait for the user to disconnect or the job to end
+    # We use a Future that will never complete unless we cancel it, 
+    # but we can wrap it in a try/finally to catch the shutdown.
+    try:
+        # This keeps the agent alive
+        await ctx.room.disconnect_future
+    except Exception:
+        pass
+    finally:
+        print(f"--- [SHUTDOWN] Room {room_name} disconnected. Starting Evaluation...")
+        await run_evaluation(room_name, db_helper)
+
+async def run_evaluation(room_name, db_helper):
+    print(f"--- [EVAL] Fetching data for room {room_name}...")
+    
+    # 1. Fetch latest session data (with full transcript)
+    try:
+        session_data = db_helper.get_session(room_name)
+    except Exception as e:
+         print(f"--- [ERROR] DB Error during eval fetch: {e}")
+         return
+
+    if not session_data or 'transcript' not in session_data:
+        print("--- [ERROR] No transcript found for evaluation.")
+        return
+
+    # 2. Prepare data
+    # Convert transcript list to a readable string
+    transcript_text = "\n".join([f"{entry.get('role', 'unknown').upper()}: {entry.get('text','')}" for entry in session_data['transcript']])
+    
+    # CORRECT KEY: Use 'jd_data' not 'job_description'
+    jd_text = str(session_data.get('jd_data', 'Not provided'))
+    resume_text = str(session_data.get('resume_context', 'Not provided'))
+
+    print("--- [EVAL] generating evaluation with LLM...")
+    # 3. Call LLM
+    try:
+        eval_json_str = evaluate_candidate(transcript_text, jd_text, resume_text)
+        
+        # 4. Parse and Save
+        eval_data = json.loads(eval_json_str)
+        db_helper.save_evaluation(room_name, eval_data)
+        print(f"--- [EVAL] Evaluation saved successfully! Score: {eval_data.get('overall_score')}/10")
+    except json.JSONDecodeError:
+        print(f"--- [ERROR] Failed to parse evaluation JSON: {eval_json_str}")
+    except Exception as e:
+        print(f"--- [ERROR] Evaluation Failed: {e}")
 
 if __name__ == "__main__":
     print("--- Starting Diagnositc Interviewer Agent ---")
