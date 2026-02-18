@@ -35,6 +35,25 @@ else:
 if os.getenv("cartesia_api_key") and not os.getenv("CARTESIA_API_KEY"):
     os.environ["CARTESIA_API_KEY"] = os.getenv("cartesia_api_key")
 
+# Pre-load VAD model globally to avoid loading it for every session
+# print("--- [DEBUG] Pre-loading VAD model...")
+# try:
+#     vad_plugin = silero.VAD.load(min_silence_duration=0.5, min_speech_duration=0.3)
+#     print("--- [DEBUG] VAD model pre-loaded successfully.")
+# except Exception as e:
+#     print(f"--- [ERROR] Failed to pre-load VAD model: {e}")
+#     vad_plugin = None
+
+# Global import for db_helper
+try:
+    from resume_jd_analyser.db_utils import db_helper
+except ImportError:
+    try:
+        from main_live_kit.resume_jd_analyser.db_utils import db_helper
+    except ImportError:
+         print("--- [WARNING] Could not import db_helper globally.")
+         db_helper = None
+
 async def entrypoint(ctx: JobContext):
     print(f"--- [DEBUG] Room {ctx.room.name}: STARTING ENTRYPOINT ---")
     
@@ -47,9 +66,6 @@ async def entrypoint(ctx: JobContext):
         return
     
     room_name = ctx.room.name
-    # Lazy import to avoid circular dependency if any, though likely fine here
-    from resume_jd_analyser.db_utils import db_helper
-    
     print(f"--- [DEBUG] Fetching session for room: {room_name}")
     try:
         interviewer_data = db_helper.get_session(room_name)
@@ -108,8 +124,14 @@ INTERVIEW STRUCTURE (10 Questions Total):
        
         tts_plugin = deepgram.TTS()
         
-        print("--- [DEBUG] Initializing VAD (Silero)...")
-        vad_plugin = silero.VAD.load()
+        # Pre-load VAD model globally to avoid loading it for every session
+        print("--- [DEBUG] Pre-loading VAD model...")
+        try:
+            vad_plugin = silero.VAD.load(min_silence_duration=0.5, min_speech_duration=0.3)
+            print("--- [DEBUG] VAD model pre-loaded successfully.")
+        except Exception as e:
+            print(f"--- [ERROR] Failed to pre-load VAD model: {e}")
+            vad_plugin = None
 
         print("--- [DEBUG] Creating AgentSession...")
         session = AgentSession(
@@ -167,7 +189,7 @@ INTERVIEW STRUCTURE (10 Questions Total):
     print(f"--- [DEBUG] Sending greeting: {greeting}")
     
     try:
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1) # Removed artificial delay
         await session.say(greeting, allow_interruptions=True)
         session.generate_reply()
         print("--- [DEBUG] Greeting sent.")
