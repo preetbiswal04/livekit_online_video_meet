@@ -1587,8 +1587,11 @@
 
                     if (!resumeFile || !jdText) return alert("Please upload a resume and paste the job description.");
 
-                    btn.innerText = "Analyzing...";
+                    const originalBtnText = btn.innerText;
+                    btn.innerText = "Analyzing Resume... (Please Wait)";
                     btn.disabled = true;
+                    btn.style.opacity = "0.7";
+                    btn.style.cursor = "not-allowed";
 
                     const formData = new FormData();
                     formData.append('resume', resumeFile);
@@ -1607,8 +1610,13 @@
                         } else {
                             alert("Error: " + (result.error || "Failed to analyze"));
                         }
-                    } catch (err) {
-                        alert("Failed to connect to server: " + err.message);
+                    } catch (e) {
+                        console.error(e);
+                        alert("Error during upload: " + e.message);
+                        btn.innerText = originalBtnText; // Reset button text
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                        btn.style.cursor = "pointer";
                     } finally {
                         btn.innerText = "Prepare Interview";
                         btn.disabled = false;
