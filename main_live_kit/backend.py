@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify, render_template, request, session, url_for, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
