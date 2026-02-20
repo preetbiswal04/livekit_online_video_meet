@@ -4,7 +4,9 @@ import sys
 from backend import app
 from livekit.agents import cli, WorkerOptions
 from transcription_agent_deepgram import entrypoint
-from interviewer_agent import entrypoint as interviewer_entry
+from interviewer_agent_2 import entrypoint as interviewer_entry
+#from manual_interviewer_agent import entrypoint as interviewer_entry
+#from interviewer_agent import entrypoint as interviewer_entry
 from transcription_agent_deepgram import entrypoint as transcriber_entry
 
 def run_flask() :
