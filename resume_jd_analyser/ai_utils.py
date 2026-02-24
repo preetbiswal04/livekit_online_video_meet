@@ -1,55 +1,61 @@
 import os
-import vertexai
-from vertexai.generative_models import GenerativeModel, HarmCategory, HarmBlockThreshold
-from google.oauth2 import service_account
+import boto3
 
-_gemini_fast_model = None
+_aws_gemma_client = None
 
-from vertexai.generative_models import SafetySetting
-
-# Export standard safety settings for Vertex AI
-SAFETY_SETTINGS = [
-    SafetySetting(
-        category=HarmCategory.HARM_CATEGORY_HARASSMENT,
-        threshold=HarmBlockThreshold.BLOCK_NONE,
-    ),
-    SafetySetting(
-        category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        threshold=HarmBlockThreshold.BLOCK_NONE,
-    ),
-    SafetySetting(
-        category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        threshold=HarmBlockThreshold.BLOCK_NONE,
-    ),
-    SafetySetting(
-        category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        threshold=HarmBlockThreshold.BLOCK_NONE,
-    ),
-]
-
-def get_gemini_fast_model():
-    global _gemini_fast_model
-    if _gemini_fast_model is None:
-        key_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),"service_account_key.json")
-
-        if not os.path.exists(key_path):
-            raise FileNotFoundError(f"service account key not found at {key_path}")
-
-        print(f"loading credentials from {key_path}")
-        credentials = service_account.Credentials.from_service_account_file(key_path)
-        vertexai.init(
-            project = "balmy-amp-481707-p6",
-            location = "us-central1",
-            credentials = credentials
+def get_gemma_model():
+    global _aws_gemma_client
+    if _aws_gemma_client is None:
+        session = boto3.Session(
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION"),
         )
-        _gemini_fast_model = GenerativeModel(
-            "gemini-2.5-flash",
-            generation_config={
-                "temperature":0,
-                "max_output_tokens":8192,
-                "top_p":0.95,
-                "top_k":40,
-                "response_mime_type":"text/plain"
+        _aws_gemma_client = session.client(
+            service_name="bedrock-runtime"
+        )
+    return _aws_gemma_client
+
+class DummyContentPart:
+    pass
+
+class DummyContent:
+    def __init__(self, text):
+        self.parts = [DummyContentPart()]
+
+class DummyCandidate:
+    def __init__(self, text):
+        self.content = DummyContent(text)
+
+class DummyResponse:
+    def __init__(self, text):
+        self.text = text
+        self.candidates = [DummyCandidate(text)]
+
+class BaseFastModel:
+    def generate_content(self, prompt, safety_settings=None):
+        client = get_gemma_model()
+        response = client.converse(
+            modelId="google.gemma-3-12b-it",
+            messages=[
+                {"role": "user", "content": [{"text": prompt}]}
+            ],
+            inferenceConfig={
+                "maxTokens": 8192,
+                "temperature": 0.0,
+                "topP": 0.95
             }
         )
-    return _gemini_fast_model
+        text = response["output"]["message"]["content"][0]["text"]
+        return DummyResponse(text)
+
+def get_gemini_fast_model():
+    return BaseFastModel()
+
+SAFETY_SETTINGS = []
+
+def generate_text(prompt):
+    model = get_gemini_fast_model()
+    return model.generate_content(prompt).text
+
+    
