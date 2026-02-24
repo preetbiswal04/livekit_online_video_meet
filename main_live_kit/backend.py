@@ -35,7 +35,7 @@ LIVEKIT_API_URL = os.environ.get('LIVEKIT_API_URL', 'wss://appvideocall-4e91dis5
 def home():
     if 'user' not in session:
         return redirect(url_for('login_page'))
-    return render_template('index.html', username = session['user'])
+    return render_template('index.html', username = session['user'],role=session.get('role','candidate'))
 
 #login route
 @app.route('/login')
@@ -51,12 +51,13 @@ def signup():
     data = request.json
     username = data.get('username')
     password = data.get('password')
+    role = data.get('role','candidate')
     if not username or not password:
         return jsonify({'error':"username and password are required"}), 400
     if users_collection.find_one({"username": username}):
         return jsonify({'error':"username already exists"}), 400
     hashed_password = generate_password_hash(password)
-    users_collection.insert_one({"username": username, "password": hashed_password})
+    users_collection.insert_one({"username": username, "password": hashed_password,"role":role})
     return jsonify({'status': "created"}), 201
 
 @app.route('/api/login', methods=['POST'])
@@ -67,6 +68,7 @@ def login():
     user = users_collection.find_one({"username": username})
     if user and check_password_hash(user['password'], password):
         session['user'] = username
+        session['role'] = user.get('role','candidate')
         return jsonify({"status": "logged_in"})
     
     return jsonify({"error": "Invalid credentials"}), 401
@@ -95,31 +97,31 @@ def get_token(room_name, user_identity):
 
 # --- Expanded API for Teams UI ---
 
-@app.route('/api/rooms')
-def list_rooms():
-    # In a real app, you'd fetch this from LiveKit API or a database
-    # For now, we'll return some mock active rooms
-    rooms = [
-        {"name": "General", "participants": 3, "id": "general"},
-        {"name": "Project Alpha", "participants": 5, "id": "alpha"},
-        {"name": "Weekly Sync", "participants": 2, "id": "sync"}
-    ]
-    return jsonify(rooms)
+# @app.route('/api/rooms')
+# def list_rooms():
+#     # In a real app, you'd fetch this from LiveKit API or a database
+#     # For now, we'll return some mock active rooms
+#     rooms = [
+#         {"name": "General", "participants": 3, "id": "general"},
+#         {"name": "Project Alpha", "participants": 5, "id": "alpha"},
+#         {"name": "Weekly Sync", "participants": 2, "id": "sync"}
+#     ]
+#     return jsonify(rooms)
 
-@app.route('/api/create-room', methods=['POST'])
-def create_room():
-    # Mock room creation
-    new_room_id = f"room-{os.urandom(4).hex()}"
-    return jsonify({"room_name": new_room_id, "status": "created"})
+# @app.route('/api/create-room', methods=['POST'])
+# def create_room():
+#     # Mock room creation
+#     new_room_id = f"room-{os.urandom(4).hex()}"
+#     return jsonify({"room_name": new_room_id, "status": "created"})
 
-@app.route('/api/user')
-def get_user_info():
-    # Mock user info
-    return jsonify({
-        "id": "user-" + os.urandom(2).hex(),
-        "name": "Jane Doe",
-        "role": "Moderator"
-    })
+# @app.route('/api/user')
+# def get_user_info():
+#     # Mock user info
+#     return jsonify({
+#         "id": "user-" + os.urandom(2).hex(),
+#         "name": "Jane Doe",
+#         "role": "Moderator"
+#     })
 
 # --- MongoDB Integration ---
 from pymongo import MongoClient
@@ -223,6 +225,70 @@ def get_evaluations():
         return jsonify(evaluations)
     except Exception as e:
         print(f"Error fetching evaluations: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/dashboard-stats', methods=['GET'])
+def get_dashboard_stats():
+    try:
+        # 1. Get totals and breakdown by recommendation
+        pipeline = [
+            {"$match": {"evaluation": {"$exists": True}}},
+            {"$group": {
+                "_id": "$evaluation.recommendation",
+                "count": {"$sum": 1},
+                "names": {"$push": "$candidate_name"}
+            }}
+        ]
+        
+        results = list(db_helper.collection.aggregate(pipeline))
+        
+        # Initialize default counters
+        stats = {
+            "total_interviews": 0,
+            "breakdown": {
+                "Strong Hire": {"count": 0, "names": []},
+                "Hire": {"count": 0, "names": []},
+                "Weak Hire": {"count": 0, "names": []},
+                "Reject": {"count": 0, "names": []}
+            },
+            "recent_candidates": []
+        }
+        
+        # Populate counts and names
+        for row in results:
+            rec = row.get("_id")
+            count = row.get("count", 0)
+            names = row.get("names", [])
+            stats["total_interviews"] += count
+            
+            if rec in stats["breakdown"]:
+                stats["breakdown"][rec]["count"] = count
+                stats["breakdown"][rec]["names"] = names
+            elif rec:
+                if "Other" not in stats["breakdown"]:
+                    stats["breakdown"]["Other"] = {"count": 0, "names": []}
+                stats["breakdown"]["Other"]["count"] += count
+                stats["breakdown"]["Other"]["names"].extend(names)
+                
+        # 2. Get 5 most recent evaluations for the quick list
+        recent_cursor = db_helper.collection.find(
+            {"evaluation": {"$exists": True}},
+            {"candidate_name": 1, "evaluation.recommendation": 1, "evaluation.overall_score": 1, "room_id": 1}
+        ).sort("_id", -1).limit(5)
+        
+        for doc in recent_cursor:
+            stats["recent_candidates"].append({
+                "candidate_name": doc.get("candidate_name", "Unknown"),
+                "recommendation": doc.get("evaluation", {}).get("recommendation", "N/A"),
+                "score": doc.get("evaluation", {}).get("overall_score", "N/A"),
+                "room_id": doc.get("room_id")
+            })
+            
+        return jsonify(stats)
+        
+    except Exception as e:
+        print(f"Error fetching dashboard stats: {e}")
         return jsonify({"error": str(e)}), 500
 
 
