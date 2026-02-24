@@ -124,7 +124,7 @@ INTERVIEW STRUCTURE (10 Questions Total):
         
         # Use specific voice if requested
         print("--- [DEBUG] Initializing TTS (Cartesia) ---")
-        tts_plugin = cartesia.TTS(voice="e07c00bc-4134-4eae-9ea4-1a55fb45746b")
+        tts_plugin = deepgram.TTS()
         
         
         print("--- [DEBUG] Initializing VAD (Silero) ---")
@@ -238,3 +238,4 @@ async def run_evaluation(room_name, db_helper):
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, port=8050))
+
