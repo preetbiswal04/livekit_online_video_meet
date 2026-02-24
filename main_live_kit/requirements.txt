@@ -1,0 +1,27 @@
+flask
+flask-cors
+gunicorn
+python-dotenv
+pymongo
+motor
+numpy
+pdfplumber
+python-docx
+streamlit
+
+# Google / Vertex AI
+google-generativeai
+google-cloud-aiplatform
+google-auth
+
+# LiveKit
+livekit-agents
+livekit-plugins-openai
+livekit-plugins-deepgram
+livekit-plugins-elevenlabs
+livekit-plugins-silero
+# livekit-plugins-cartesia (Assuming this is needed since we used it in code)
+livekit-plugins-cartesia
+
+#aws 
+boto3
