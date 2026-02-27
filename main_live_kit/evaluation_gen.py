@@ -61,7 +61,7 @@ EVALUATION CRITERIA:
    - 5-6: Basic understanding but lacks depth.
    - 3-4: Weak technical clarity.
    - 1-2: No meaningful technical competency.
-   -1-0 : if meeting joined and leaved and not answered any question and also not introducting temself even after asked must give 0 score and recommendation MUST be "Reject".
+   - 0-1 : If meeting joined and candiate leaves without answering any question or introducing themselves even after being asked, must give 0-1 score and recommendation MUST be "Reject".
 
 OUTPUT FORMAT:
 You must return strictly VALID JSON.
@@ -73,16 +73,16 @@ Return ONLY valid JSON.
 Structure:
 {{
     "candidate_name": "Extract from Resume",
-    "overall_score": (Integer 1-10),
-    "technical_score": (Integer 1-10),
-    "communication_score": (Integer 1-10),
+    "overall_score": (Integer 0-10),
+    "technical_score": (Integer 0-10),
+    "communication_score": (Integer 0-10),
     "recommendation": "Strong Hire" | "Hire" | "Reject",
     "summary": "Executive summary in maximum 3 concise sentences.",
     "detailed_feedback": [
         {{
             "question": "Exact question asked",
             "candidate_answer_summary": "Brief summary of their answer",
-            "score": (1-10),
+            "score": (0-10),
             "feedback": "Precise technical evaluation explaining strengths and gaps."
         }}
     ]
