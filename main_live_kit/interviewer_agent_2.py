@@ -62,16 +62,9 @@ async def entrypoint(ctx: JobContext):
     
     # 1. System Prompt & Chat Context Initialization
     if not interviewer_data:
-        print(f"--- [INFO] Room '{room_name}' is not an interview room. Agent is NOT joining.")
-        return
-
-    print("--- [DEBUG] Attempting to connect to room...")
-    try:
-        await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
-        print(f"--- [DEBUG] CONNECTED! Local Identity: {ctx.room.local_participant.identity}")
-    except Exception as e:
-        print(f"--- [ERROR] Connection Failed: {e}")
-        return
+        print(f"--- [WARNING] Room '{room_name}' is not an interview room. Agent is NOT joining.")
+        
+        # Fallback system prompt for safety
         company_name = 'NEWEL TECHNOLOGIES'        
         system_prompt = f""" You are an expert technical interviewer for {company_name}.
 Your task is to conduct a technical interview.
@@ -94,14 +87,15 @@ INTERVIEW STRUCTURE (10 Questions Total):
 4. 2 Questions: Technical deep-dive from JOB DESCRIPTION.
 5. 2 Questions: Experience-based scenarios (related to JOB DESCRIPTION requirements).
 """
-    print(f"--- [DEBUG] Found session data for {interviewer_data.get('candidate_name')}")
-    system_prompt = f"""You are a professional AI Technical Interviewer.
-    Candidate: {interviewer_data['candidate_name']}
-    Resume Context: {interviewer_data['resume_context']}
-    
-    Ask these questions one by one:
-    {interviewer_data['questions']}
-    """
+    else:
+        print(f"--- [DEBUG] Found session data for {interviewer_data.get('candidate_name')}")
+        system_prompt = f"""You are a professional AI Technical Interviewer.
+        Candidate: {interviewer_data['candidate_name']}
+        Resume Context: {interviewer_data['resume_context']}
+        
+        Ask these questions one by one:
+        {interviewer_data['questions']}
+        """
     chat_ctx = llm.ChatContext()
     chat_ctx.add_message(role="system", content=system_prompt)
 
@@ -125,11 +119,13 @@ INTERVIEW STRUCTURE (10 Questions Total):
         # Use specific voice if requested
         print("--- [DEBUG] Initializing TTS (Cartesia) ---")
         tts_plugin = cartesia.TTS(voice="e07c00bc-4134-4eae-9ea4-1a55fb45746b")
+        # tts_plugin = deepgram.TTS()
         
         
         print("--- [DEBUG] Initializing VAD (Silero) ---")
         try:
-            vad_plugin = silero.VAD.load(min_silence_duration=0.3, min_speech_duration=0.3)
+            # Increased thresholds to prevent breaking voice from background noise
+            vad_plugin = silero.VAD.load(min_silence_duration=0.6, min_speech_duration=0.4)
         except Exception as e:
             print(f"--- [ERROR] VAD Init Failed: {e}")
             vad_plugin = None
@@ -194,7 +190,8 @@ INTERVIEW STRUCTURE (10 Questions Total):
     greeting = f"Hello {name}, I am your AI interviewer today. Let me load your context. Let's begin!"
     try:
         print(f"--- [DEBUG] Agent saying: {greeting}")
-        await session.say(greeting, allow_interruptions=True)
+        # Disable interruptions for the initial greeting to ensure it plays through
+        await session.say(greeting, allow_interruptions=False)
         print("--- [DEBUG] Greeting track sent. Generating first reply...")
         session.generate_reply()
     except Exception as e:
