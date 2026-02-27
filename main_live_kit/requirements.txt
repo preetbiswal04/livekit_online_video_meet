@@ -10,9 +10,6 @@ python-docx
 streamlit
 
 # Google / Vertex AI
-google-generativeai
-google-cloud-aiplatform
-google-auth
 
 # LiveKit
 livekit-agents
