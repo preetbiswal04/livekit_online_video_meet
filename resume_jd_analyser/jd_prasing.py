@@ -1,8 +1,7 @@
-import google.generativeai as genai
 import os
 import json
 import re
-from .ai_utils import get_gemini_fast_model, SAFETY_SETTINGS
+from .ai_utils_2 import get_gemini_fast_model, SAFETY_SETTINGS
 
 model = get_gemini_fast_model()
 
