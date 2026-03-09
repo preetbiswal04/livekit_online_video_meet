@@ -10,16 +10,20 @@ model = get_gemini_fast_model()
 
 def prase_resume(resume_text):
     prompt = f"""
-    Extract the following information from the resume:
-    -Name
-    -Phone Number
-    -Email
-    -Education
-    -Skills
-    -Experience
+    You are a professional resume parser. Extract the following information from the provided resume text.
     
-    Return strict in JSON format
-
+    FIELDS TO EXTRACT:
+    - "Name": The candidate's FULL NAME (e.g., "John Doe"). Look at the very top of the resume. If you cannot find a clear full name, look for names in headers or contact sections.
+    - "Phone Number"
+    - "Email"
+    - "Education"
+    - "Skills"
+    - "Experience"
+    
+    OUTPUT FORMAT:
+    Return the result in STRICT JSON format only. Do not include any other text.
+    
+    RESUME TEXT:
     {resume_text}
     """
     
