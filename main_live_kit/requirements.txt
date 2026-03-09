@@ -1,24 +1,29 @@
+# --- Framework & Server ---
 flask
 flask-cors
 gunicorn
 python-dotenv
 pymongo
-motor
+boto3
+
+# --- LiveKit & Plugins ---
+livekit-agents
+livekit-plugins-aws
+livekit-plugins-silero
+livekit-plugins-deepgram
+
+# --- Local AI Models (STT & TTS) ---
+faster-whisper
+kokoro-onnx
+# Use onnxruntime-gpu if you have an NVIDIA GPU, else use onnxruntime
+onnxruntime-gpu
 numpy
+
+# --- Document & Text Processing ---
 pdfplumber
 python-docx
-streamlit
+google-generativeai
 
-# Google / Vertex AI
-
-# LiveKit
-livekit-agents
-livekit-plugins-openai
-livekit-plugins-deepgram
-livekit-plugins-elevenlabs
-livekit-plugins-silero
-# livekit-plugins-cartesia (Assuming this is needed since we used it in code)
-livekit-plugins-cartesia
-
-#aws 
-boto3
+# --- Utilities ---
+opencv-python
+soundfile
